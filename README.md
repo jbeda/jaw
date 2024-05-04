@@ -54,8 +54,21 @@ synth in that there are building blocks that can be hooked together.
 
 ## Plan
 
-Don't get stuck. Get something working before making it pretty.  Worry about
-creating the "right" environment later.  See if there is something interesting
+Don't get stuck. Get something working before making it pretty. Worry about
+creating the "right" environment later. See if there is something interesting
 first.
 
-First project trying to use co-pilot.  Let's see if it is helpful.
+First project trying to use co-pilot. Let's see if it is helpful.
+
+Start with defining core shapes and perhaps grouping. Play with typescript?
+
+## Technologies to consider
+
+What are libraries or other technologies that I might want to consider.
+
+### Reactive Frameworks?
+
+I'm leaning against this as often these are optimized around having changes
+**pushed** at them and then doing a minimal recomputation based on that. Since
+we are likely to operate on a tick like a game engine we can just pull new
+values and reevaluate the entire scene each frame.
