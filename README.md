@@ -72,3 +72,16 @@ I'm leaning against this as often these are optimized around having changes
 **pushed** at them and then doing a minimal recomputation based on that. Since
 we are likely to operate on a tick like a game engine we can just pull new
 values and reevaluate the entire scene each frame.
+
+### ECS
+
+Each node in the tree will have a set of optional attributes.  We want this to
+be extensible.  In some way this is similar to an ECS system.  I looked at ECS
+systems briefly and there are some interesting choices but the focus is on doing
+things like querying (give me all of the entities with component X) and we don't
+need that.  In addition, the ordering of "components" is somewhat unique.
+Finally, many of these expect a closed set of "components" that are directly
+known to the entity definition. This isn't applicable here as we want this to be
+extensible.
+
+

@@ -1,19 +1,20 @@
 import p5 from "p5";
+import { Square } from "./shapes";
+import { RGBColor } from "./color";
 
 const sketch = (p: p5) => {
   let size = 50;
+  let square: Square;
   p.setup = () => {
     p.createCanvas(800, 800);
+    square = new Square(p, 100, 100, size);
+    square.fill = new RGBColor(255, 0, 0);
+    square.stroke = new RGBColor(0, 0, 255);
   };
 
   p.draw = () => {
-    p.background(40);
-    p.noStroke();
-    p.translate(p.width / 2, p.height / 2);
-    let wave = p.sin(p.radians(p.frameCount)) * 50;
-    let wave2 = p.cos(p.radians(p.frameCount)) * 50;
-    p.circle(wave, wave2, size);
-    p.circle(wave2, wave, size);
+    p.background(255);
+    square.draw();
   };
 };
 
