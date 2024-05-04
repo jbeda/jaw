@@ -1,0 +1,22 @@
+{
+  "name": "jaw",
+  "version": "1.0.0",
+  "description": "Joe's Art Workspace",
+  "main": "index.js",
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "start": "node ./scripts/serve.mjs",
+    "analyze": "node ./scripts/analyze.mjs"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "p5": "^1.9.3"
+  },
+  "devDependencies": {
+    "@types/p5": "^1.7.6",
+    "esbuild": "^0.20.2",
+    "esbuild-copy-static-files": "^0.1.0",
+    "typescript": "^5.4.5"
+  }
+}
