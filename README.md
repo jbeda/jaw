@@ -51,6 +51,7 @@ synth in that there are building blocks that can be hooked together.
   - Color pallette as primitive? (similar to scale/quantization in synth)
     - Discrete and predefined
     - Gradient with even stops
+  - Connect to MIDI or modular ADC components (Expert Sleepers ES-8, for example)
 
 ## Plan
 
@@ -75,13 +76,11 @@ values and reevaluate the entire scene each frame.
 
 ### ECS
 
-Each node in the tree will have a set of optional attributes.  We want this to
-be extensible.  In some way this is similar to an ECS system.  I looked at ECS
+Each node in the tree will have a set of optional attributes. We want this to
+be extensible. In some way this is similar to an ECS system. I looked at ECS
 systems briefly and there are some interesting choices but the focus is on doing
 things like querying (give me all of the entities with component X) and we don't
-need that.  In addition, the ordering of "components" is somewhat unique.
+need that. In addition, the ordering of "components" is somewhat unique.
 Finally, many of these expect a closed set of "components" that are directly
 known to the entity definition. This isn't applicable here as we want this to be
 extensible.
-
-
