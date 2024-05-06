@@ -63,6 +63,38 @@ First project trying to use co-pilot. Let's see if it is helpful.
 
 Start with defining core shapes and perhaps grouping. Play with typescript?
 
+### Main Object Model
+
+- **Canvas**: A space that things are drawn into. Has a root **Node**. All
+  other objects are created in a **Canvas** and can't be used across multiple.
+- **Node**: A drawable thing.
+  - method _Render_: Produces **DrawPrimitive**s that can be manipulated by
+    other entities are eventually concretely rendered to the screen.
+    - [idea] May be called multiple times in multple contexts to generate different content
+      based on a render index.
+  - attribute _parent_
+  - attribute _children_: a list of **Node**s
+  - attribute _attributes_: a list **AttributeSet**s
+  - attribute _modifiers_: a list of **Modifier**s
+- **AttributeSet**: A set of attributes that is attached to a Node. Can be
+  enabled/disabled. The set of these is hardcoded. Some allow for inheritence down the
+  **Node** hierarchy.
+- **Modifier**: Rendering middleware. Takes a set of **DrawPrimitives**,
+  modifies them and returns a set of **DrawPrimitives**.
+- **DrawPrimitive**: a thing that can be drawn. Need more detail but likely to
+  start with a simple path construct.
+- Core Types: Color, Vector, more?
+- **ValueGenerator**: a thing that produce values that can be referenced in
+  various places. Probably includes timelines and noise functions.
+- **ValueFunction**: A function takes a **RenderContext** and returns a concrete
+  value used for rendering.
+  - _TODO_: Probably need to be able to take code and evaluate in an
+    isolated/safe context.
+- **RenderContext**: An arbitrary bag of concrete data that can be used as
+  context when rendering.
+
+**TODO**: Do we make attributes self describing for GUIs?
+
 ## Technologies to consider
 
 What are libraries or other technologies that I might want to consider.
@@ -84,3 +116,10 @@ need that. In addition, the ordering of "components" is somewhat unique.
 Finally, many of these expect a closed set of "components" that are directly
 known to the entity definition. This isn't applicable here as we want this to be
 extensible.
+
+### Mixins
+
+I don't think this'll work. In general it is more static and we expect that the
+Mixin will extend the definition of the base class. I think we want modifiers
+to be an explicit thing that can be queried, enabled/disabled, add/removed, etc.
+We also want to track the order of modifiers.
