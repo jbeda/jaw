@@ -9,3 +9,6 @@ www/
 
 # Ignore package lock files
 package-lock.json
+
+# esbuild build meta file
+build-meta.json

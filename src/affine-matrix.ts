@@ -53,12 +53,23 @@ export class AffineMatrix {
     return this;
   }
 
+  static fromTranslate(v: Vector): AffineMatrix {
+    return new AffineMatrix(1, 0, 0, 1, v.x, v.y);
+  }
+
   translate(v: Vector): AffineMatrix {
     const { x, y } = v;
     const { a, b, c, d } = this;
     this.tx += a * x + c * y;
     this.ty += b * x + d * y;
     return this;
+  }
+
+  static fromScale(s: Vector | number): AffineMatrix {
+    if (typeof s === 'number') {
+      return new AffineMatrix(s, 0, 0, s, 0, 0);
+    }
+    return new AffineMatrix(s.x, 0, 0, s.y, 0, 0);
   }
 
   scale(v: Vector): AffineMatrix {
@@ -73,14 +84,23 @@ export class AffineMatrix {
   /**
    * @param angle The angle to rotate from 0 to 1
    */
+  static fromRotate(angle: number): AffineMatrix {
+    const cos = Math.cos(angle * 2 * Math.PI);
+    const sin = Math.sin(angle * 2 * Math.PI);
+    return new AffineMatrix(cos, sin, -sin, cos, 0, 0);
+  }
+
+  /**
+   * @param angle The angle to rotate from 0 to 1
+   */
   rotate(angle: number): AffineMatrix {
     const cos = Math.cos(angle * 2 * Math.PI);
     const sin = Math.sin(angle * 2 * Math.PI);
     const { a, b, c, d } = this;
-    this.a = a * cos - b * sin;
-    this.b = a * sin + b * cos;
-    this.c = c * cos - d * sin;
-    this.d = c * sin + d * cos;
+    this.a = a * cos + c * sin;
+    this.b = b * cos + d * sin;
+    this.c = c * cos - a * sin;
+    this.d = d * cos - b * sin;
     return this;
   }
 
