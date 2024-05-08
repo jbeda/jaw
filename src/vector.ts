@@ -1,7 +1,7 @@
+import { AffineMatrix } from './affine-matrix';
+
 export class Vector {
   constructor(public x: number = 0, public y: number = 0) {
-    this.x = x;
-    this.y = y;
   }
 
   clone(): Vector {
@@ -85,5 +85,39 @@ export class Vector {
     this.x += (v.x - this.x) * t;
     this.y += (v.y - this.y) * t;
     return this;
+  }
+
+  transform(affineMatrix: AffineMatrix) {
+    const { x, y } = this;
+    const { a, b, c, d, tx, ty } = affineMatrix;
+    this.x = a * x + c * y + tx;
+    this.y = b * x + d * y + ty;
+    return this;
+  }
+
+  /**
+ * @param angle The angle to rotate from 0 to 1 counterclockwise
+ */
+
+  rotate(angle: number): Vector {
+    const cos = Math.cos(angle * 2 * Math.PI);
+    const sin = Math.sin(angle * 2 * Math.PI);
+    const x = this.x;
+    const y = this.y;
+    this.x = x * cos - y * sin;
+    this.y = x * sin + y * cos;
+    return this;
+  }
+
+  distance(v: Vector) {
+    const dx = v.x - this.x;
+    const dy = v.y - this.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  distanceSquared(v: Vector) {
+    const dx = v.x - this.x;
+    const dy = v.y - this.y;
+    return dx * dx + dy * dy;
   }
 }

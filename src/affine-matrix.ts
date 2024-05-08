@@ -53,6 +53,21 @@ export class AffineMatrix {
     return this;
   }
 
+  invert(): AffineMatrix {
+    const { a, b, c, d, tx, ty } = this;
+    const ad_minus_bc = a * d - b * c;
+    const bc_minus_ad = b * c - a * d;
+
+    this.a = d / ad_minus_bc;
+    this.b = b / bc_minus_ad;
+    this.c = c / bc_minus_ad;
+    this.d = a / ad_minus_bc;
+    this.tx = (d * tx - c * ty) / bc_minus_ad;
+    this.ty = (b * tx - a * ty) / ad_minus_bc;
+
+    return this;
+  }
+
   static fromTranslate(v: Vector): AffineMatrix {
     return new AffineMatrix(1, 0, 0, 1, v.x, v.y);
   }
@@ -65,6 +80,12 @@ export class AffineMatrix {
     return this;
   }
 
+  preTranslate(v: Vector): AffineMatrix {
+    this.tx += v.x;
+    this.ty += v.y;
+    return this;
+  }
+
   static fromScale(s: Vector | number): AffineMatrix {
     if (typeof s === 'number') {
       return new AffineMatrix(s, 0, 0, s, 0, 0);
@@ -72,8 +93,14 @@ export class AffineMatrix {
     return new AffineMatrix(s.x, 0, 0, s.y, 0, 0);
   }
 
-  scale(v: Vector): AffineMatrix {
-    const { x, y } = v;
+  scale(v: Vector | number): AffineMatrix {
+    let x: number, y: number;
+    if (typeof v === 'number') {
+      x = y = v;
+    } else {
+      ({ x, y } = v);
+    }
+
     this.a *= x;
     this.b *= x;
     this.c *= y;
@@ -81,8 +108,21 @@ export class AffineMatrix {
     return this;
   }
 
+
+  preScale(v: Vector): AffineMatrix {
+    const { x, y } = v;
+
+    this.a *= x;
+    this.b *= y;
+    this.c *= x;
+    this.d *= y;
+    this.tx *= x;
+    this.ty *= y;
+    return this;
+  }
+
   /**
-   * @param angle The angle to rotate from 0 to 1
+   * @param angle The angle to rotate from 0 to 1 counterclockwise
    */
   static fromRotate(angle: number): AffineMatrix {
     const cos = Math.cos(angle * 2 * Math.PI);
@@ -91,16 +131,18 @@ export class AffineMatrix {
   }
 
   /**
-   * @param angle The angle to rotate from 0 to 1
+   * @param angle The angle to rotate from 0 to 1 counterclockwise
    */
   rotate(angle: number): AffineMatrix {
-    const cos = Math.cos(angle * 2 * Math.PI);
-    const sin = Math.sin(angle * 2 * Math.PI);
-    const { a, b, c, d } = this;
-    this.a = a * cos + c * sin;
-    this.b = b * cos + d * sin;
-    this.c = c * cos - a * sin;
-    this.d = d * cos - b * sin;
+    this.mul(AffineMatrix.fromRotate(angle));
+    return this;
+  }
+
+  /**
+   * @param angle The angle to rotate from 0 to 1 counterclockwise
+   */
+  preRotate(angle: number): AffineMatrix {
+    this.preMul(AffineMatrix.fromRotate(angle));
     return this;
   }
 

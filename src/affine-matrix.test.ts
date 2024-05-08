@@ -37,6 +37,26 @@ describe('AffineMatrix', () => {
     expect(m.ty).toBe(112);
   });
 
+  test('invert', () => {
+    const m1 = new AffineMatrix()
+      .scale(new Vector(2, 3))
+      .rotate(0.25)
+      .translate(new Vector(4, 5))
+      .invert();
+
+    const m2 = new AffineMatrix()
+      .translate(new Vector(-4, -5))
+      .rotate(-0.25)
+      .scale(new Vector(1 / 2, 1 / 3));
+
+    expect(m1.a).toBe(m2.a);
+    expect(m1.b).toBe(m2.b);
+    expect(m1.c).toBe(m2.c);
+    expect(m1.d).toBe(m2.d);
+    expect(m1.tx).toBe(m2.tx);
+    expect(m1.ty).toBe(m2.ty);
+  });
+
   test('fromTranslate', () => {
     const v = new Vector(7, 8);
     const m = AffineMatrix.fromTranslate(v);
@@ -65,6 +85,22 @@ describe('AffineMatrix', () => {
     expect(m1.ty).toBe(m2.ty);
   });
 
+  test('preTranslate', () => {
+    let m1 = new AffineMatrix(1, 2, 3, 4, 5, 6);
+    let m2 = m1.clone();
+
+    m1.preTranslate(new Vector(7, 8));
+    m2.preMul(AffineMatrix.fromTranslate(new Vector(7, 8)));
+
+    expect(m1.a).toBeCloseTo(m2.a);
+    expect(m1.b).toBeCloseTo(m2.b);
+    expect(m1.c).toBeCloseTo(m2.c);
+    expect(m1.d).toBeCloseTo(m2.d);
+    expect(m1.tx).toBeCloseTo(m2.tx);
+    expect(m1.ty).toBeCloseTo(m2.ty);
+  });
+
+
   test('fromScale (Vector)', () => {
     let m = AffineMatrix.fromScale(new Vector(7, 8));
     expect(m.a).toBe(7);
@@ -85,7 +121,7 @@ describe('AffineMatrix', () => {
     expect(m.ty).toBe(0);
   });
 
-  test('scale', () => {
+  test('scale (Vector)', () => {
     let m1 = new AffineMatrix(1, 2, 3, 4, 5, 6);
     let m2 = m1.clone();
 
@@ -93,6 +129,21 @@ describe('AffineMatrix', () => {
     m1.mul(t1);
 
     m2.scale(new Vector(7, 8));
+
+    expect(m1.a).toBe(m2.a);
+    expect(m1.b).toBe(m2.b);
+    expect(m1.c).toBe(m2.c);
+    expect(m1.d).toBe(m2.d);
+    expect(m1.tx).toBe(m2.tx);
+    expect(m1.ty).toBe(m2.ty);
+  });
+
+  test('preScale (Vector)', () => {
+    let m1 = new AffineMatrix(1, 2, 3, 4, 5, 6);
+    let m2 = m1.clone();
+
+    m1.preScale(new Vector(7, 8));
+    m2.preMul(AffineMatrix.fromScale(new Vector(7, 8)));
 
     expect(m1.a).toBe(m2.a);
     expect(m1.b).toBe(m2.b);
@@ -134,5 +185,20 @@ describe('AffineMatrix', () => {
     expect(m1.d).toBeCloseTo(m2.d);
     expect(m1.tx).toBeCloseTo(m2.tx);
     expect(m1.ty).toBeCloseTo(m2.ty);
+  });
+
+  test('preRotate', () => {
+    let m1 = new AffineMatrix(1, 2, 3, 4, 5, 6);
+    let m2 = m1.clone();
+
+    m1.preRotate(0.25);
+    m2.preMul(AffineMatrix.fromRotate(0.25));
+
+    expect(m1.a).toBe(m2.a);
+    expect(m1.b).toBe(m2.b);
+    expect(m1.c).toBe(m2.c);
+    expect(m1.d).toBe(m2.d);
+    expect(m1.tx).toBe(m2.tx);
+    expect(m1.ty).toBe(m2.ty);
   });
 });
