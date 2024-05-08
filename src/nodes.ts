@@ -5,31 +5,31 @@ import { DrawGroup, DrawPrimitive, Path } from './draw-primitive';
 import { Vector } from './vector';
 
 /** A thing that can contribute to rendering on a canvas. */
-export abstract class Node {
+export abstract class BaseNode {
   constructor(c: Canvas) {
     this.canvas = c;
   }
 
   readonly canvas: Canvas;
 
-  parent?: Node;
+  parent?: BaseNode;
 
-  get children(): Array<Node> | undefined {
+  get children(): Array<BaseNode> | undefined {
     return undefined;
   }
 
   fill: Fill = Fill.createDefault();
-  setFill(fill: Fill): Node {
+  setFill(fill: Fill): BaseNode {
     this.fill = fill;
     return this;
   }
   stroke: Stroke = Stroke.createDefault();
-  setStroke(stroke: Stroke): Node {
+  setStroke(stroke: Stroke): BaseNode {
     this.stroke = stroke;
     return this;
   }
   transform: Transform = Transform.createDefault();
-  setTransform(transform: Transform): Node {
+  setTransform(transform: Transform): BaseNode {
     this.transform = transform;
     return this;
   }
@@ -39,23 +39,23 @@ export abstract class Node {
 
 }
 
-export class Group extends Node {
+export class GroupNode extends BaseNode {
   constructor(c: Canvas) {
     super(c);
   }
 
-  #children: Array<Node> = new Array<Node>();
-  get children(): Array<Node> {
+  #children: Array<BaseNode> = new Array<BaseNode>();
+  get children(): Array<BaseNode> {
     return this.#children;
   }
 
-  appendChild<T extends Node>(n: T): T {
+  appendChild<T extends BaseNode>(n: T): T {
     n.parent = this;
     this.#children.push(n);
     return n;
   }
 
-  prependChild<T extends Node>(n: T): T {
+  prependChild<T extends BaseNode>(n: T): T {
     n.parent = this;
     this.#children.unshift(n);
     return n;
@@ -77,7 +77,7 @@ export class Group extends Node {
   }
 }
 
-export class Rect extends Node {
+export class RectNode extends BaseNode {
   constructor(c: Canvas, x: number, y: number, width: number, height: number) {
     super(c);
     this.x = x;

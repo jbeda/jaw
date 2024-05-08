@@ -1,5 +1,4 @@
-import { Group, Node } from './nodes';
-
+import { GroupNode } from './nodes';
 
 /** Canvas is the root thing that gets drawn. */
 export class Canvas {
@@ -31,8 +30,8 @@ export class Canvas {
     return this.#width;
   }
 
-  #root: Group = new Group(this);
-  get root(): Group {
+  #root: GroupNode = new GroupNode(this);
+  get root(): GroupNode {
     return this.#root;
   }
 
