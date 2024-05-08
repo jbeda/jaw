@@ -9,6 +9,8 @@ export enum COLOR_MODE {
 export interface Color {
   v1, v2, v3, a: number
   mode: COLOR_MODE;
+
+  toCSSString(): string;
 }
 
 export class RGBColor implements Color {
@@ -18,6 +20,10 @@ export class RGBColor implements Color {
     if (a === undefined) {
       this.a = 1.0;
     }
+  }
+
+  toCSSString(): string {
+    return `rgba(${this.v1 * 255}, ${this.v2 * 255}, ${this.v3 * 255}, ${this.a})`;
   }
 }
 
@@ -29,6 +35,21 @@ export class HSBColor implements Color {
       this.a = 1.0;
     }
   }
+
+  toCSSString(): string {
+    let h = this.v1;
+    let s_hsb = this.v2;
+    let b_hsb = this.v3;
+
+    let l_hsl = b_hsb * (1 - s_hsb / 2);
+    let s_hsl;
+    if (l_hsl == 0 || l_hsl == 1) {
+      s_hsb = 0;
+    } else {
+      s_hsl = (b_hsb - l_hsl) / Math.min(l_hsl, 1 - l_hsl);
+    }
+    return `hsla(${h * 360}, ${s_hsl * 100}%, ${l_hsl * 100}%, ${this.a})`;
+  }
 }
 
 export class HSLColor implements Color {
@@ -38,6 +59,10 @@ export class HSLColor implements Color {
     if (a === undefined) {
       this.a = 1.0;
     }
+  }
+
+  toCSSString(): string {
+    return `hsla(${this.v1 * 360}, ${this.v2 * 100}%, ${this.v3 * 100}%, ${this.a})`;
   }
 }
 

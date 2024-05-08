@@ -1,21 +1,11 @@
-import p5 from "p5";
-import { Square } from "./shapes";
-import { RGBColor } from "./color";
+import { Fill } from './attributes';
+import { Canvas } from './canvas';
+import { RGBColor } from './color';
+import { Rect } from './nodes';
 
-const sketch = (p: p5) => {
-  let size = 50;
-  let square: Square;
-  p.setup = () => {
-    p.createCanvas(800, 800);
-    square = new Square(p, 100, 100, size);
-    square.fill = new RGBColor(255, 0, 0);
-    square.stroke = new RGBColor(0, 0, 255);
-  };
-
-  p.draw = () => {
-    p.background(255);
-    square.draw();
-  };
-};
-
-new p5(sketch);
+let c = new Canvas(document.getElementById('canvas') as HTMLCanvasElement);
+c.root.appendChild(
+  new Rect(c, 10, 10, 100, 100)
+    .setFill(new Fill(new RGBColor(1, 1, 0)))
+);
+c.doRender();

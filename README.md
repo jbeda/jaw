@@ -95,6 +95,17 @@ Start with defining core shapes and perhaps grouping. Play with typescript?
 
 **TODO**: Do we make attributes self describing for GUIs?
 
+### Rendering Process
+
+_(So far!)_
+
+1. Canvas has root to a hierarchy of Nodes.
+1. Main calls `Canvas.doRender`
+   1. Background is cleared
+   1. `Node.draw` is called on root. This returns a DrawPrimitive.
+   1. `DrawPrimitive.htmlCanvasRender` is called on the DrawPrimitive to render
+      to HTML Canvas element.
+
 ## Technologies to consider
 
 What are libraries or other technologies that I might want to consider.
