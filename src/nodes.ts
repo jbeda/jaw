@@ -43,6 +43,13 @@ export abstract class BaseNode {
       c.matrix = c.matrix.mul(m);
     }
 
+    if (this.fill) {
+      c.fill = this.fill;
+    }
+    if (this.stroke) {
+      c.stroke = this.stroke;
+    }
+
     let rp = this.drawImpl(c);
 
     if (rp && m) {
@@ -63,10 +70,18 @@ export abstract class BaseNode {
 
 export class NodeDrawContext {
   matrix: AffineMatrix = new AffineMatrix();
+  fill?: Readonly<Fill>;
+  stroke?: Readonly<Stroke>;
 
   clone(): NodeDrawContext {
     let c = new NodeDrawContext();
     c.matrix = this.matrix.clone();
+
+    // We don't deep clone fill and stroke because, when traversing, we will
+    // replace them vs. modifying them.
+    c.fill = this.fill;
+    c.stroke = this.stroke;
+
     return c;
   }
 
@@ -132,8 +147,8 @@ export class RectNode extends BaseNode {
     sp.lineTo(new Vector(this.x, this.y + this.height));
     sp.closed = true;
 
-    rp.fill = this.fill;
-    rp.stroke = this.stroke;
+    rp.fill = ctx.fill;
+    rp.stroke = ctx.stroke;
     return rp;
   }
 }

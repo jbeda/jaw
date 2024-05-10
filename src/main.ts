@@ -7,8 +7,10 @@ import { Vector } from './vector';
 let c = new Canvas(document.getElementById('canvas') as HTMLCanvasElement);
 c.bgFill = new Fill(new RGBColor(0, 0, 1));
 
-let r = new Nodes.RectNode(c, 0, 0, 100, 100)
-  .setFill(new Fill(new RGBColor(1, 1, 0)));
+c.root.fill = new Fill(new RGBColor(1, 1, 0));
+
+let r = new Nodes.RectNode(c, 0, 0, 100, 100);
+// r.fill = new Fill(new RGBColor(1, 1, 0));
 r.transform = new Transform();
 r.transform.center = new Vector(50, 50);
 r.transform.position = new Vector(100, 100);

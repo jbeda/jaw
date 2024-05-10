@@ -78,10 +78,12 @@ Start with defining core shapes and perhaps grouping. Play with typescript?
   - attribute _children_: a list of **Node**s
   - attribute _modifiers_: a list of **Modifier**s
   - Core rendering attributes - transform, fill, stroke
+  - It is expected that custom Nodes will be created.
 - **Modifier**: Rendering middleware. Takes a set of **DrawPrimitives**,
   modifies them and returns a set of **DrawPrimitives**.
 - **RenderPrimitive**: a thing that can be drawn. Need more detail but likely to
-  start with a simple path construct.
+  start with a simple path construct. Generally, we don't expect users to
+  create new RenderPrimitives.
 - Core Types: Color, Vector, AffineMatrix
 - **ValueGenerator**: a thing that produce values that can be referenced in
   various places. Probably includes timelines and noise functions.
@@ -100,9 +102,16 @@ _(So far!)_
 
 1. Canvas has root to a hierarchy of Nodes.
 1. Main calls `Canvas.doRender`
-   1. Background is cleared
+
+   1. Background is cleared using `Canvas.bgFill`
    1. `Node.draw` is called on root. This returns a RenderPrimitive. Context is
-      passed down with the accumulated transform to the root.
+      passed down with the accumulated transform to the root. Context also
+      includes the inherited fill and stroke from parents.
+
+      Subclasses are meant to implement drawing logic in `Node.drawImpl`. The
+      current node transform and attributes are applied before `Node.drawImpl`
+      is called.
+
    1. `RenderPrimitive.htmlCanvasRender` is called on the RenderPrimitive to render
       to HTML Canvas element. This will set the transform into the Canvas2D
       context automatically for each object during the recursive descent.
