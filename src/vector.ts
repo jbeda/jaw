@@ -8,6 +8,12 @@ export class Vector {
     return new Vector(this.x, this.y);
   }
 
+  negate(): Vector {
+    this.x = -this.x;
+    this.y = -this.y;
+    return this;
+  }
+
   add(v: Vector): Vector {
     this.x += v.x;
     this.y += v.y;

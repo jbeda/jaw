@@ -7,6 +7,12 @@ describe('Vector', () => {
     expect(v.clone()).toEqual(new Vector(1, 2));
   });
 
+  test('negate', () => {
+    const v = new Vector(1, 2);
+    v.negate();
+    expect(v).toEqual(new Vector(-1, -2));
+  });
+
   test('add', () => {
     const v = new Vector(1, 2);
     v.add(new Vector(3, 4));

@@ -1,8 +1,9 @@
 import { Modifier } from 'typescript';
 import { Fill, Stroke, Transform } from './attributes';
 import { Canvas } from './canvas';
-import { DrawGroup, DrawPrimitive, Path } from './draw-primitive';
+import { RenderGroup, RenderPrimitive, RenderPath } from './render-primitive';
 import { Vector } from './vector';
+import { AffineMatrix } from './affine-matrix';
 
 /** A thing that can contribute to rendering on a canvas. */
 export abstract class BaseNode {
@@ -35,8 +36,41 @@ export abstract class BaseNode {
   }
   readonly modifiers: Array<Modifier> = new Array<Modifier>();
 
-  abstract draw(): DrawPrimitive | undefined;
+  draw(ctx: NodeDrawContext): RenderPrimitive | undefined {
+    let c = ctx.clone();
+    let m = this.transform.enabled ? this.transform.getMatrix() : null;
+    if (m) {
+      c.matrix = c.matrix.mul(m);
+    }
 
+    let rp = this.drawImpl(c);
+
+    if (rp && m) {
+      rp.transform = m.clone();
+    }
+    return rp;
+  }
+
+  /** Subclasses implement this to return their drawing primitives.
+   * 
+   * Override this method to implement drawing for your node.  The context will
+   * automatically have your transform applied to it.  In addition, it will be
+   * applied to all of your primitives automatically as you return.
+   */
+  protected abstract drawImpl(ctx: NodeDrawContext): RenderPrimitive | undefined;
+
+}
+
+export class NodeDrawContext {
+  matrix: AffineMatrix = new AffineMatrix();
+
+  clone(): NodeDrawContext {
+    let c = new NodeDrawContext();
+    c.matrix = this.matrix.clone();
+    return c;
+  }
+
+  // TODO: implement attribute inheritance.
 }
 
 export class GroupNode extends BaseNode {
@@ -61,19 +95,19 @@ export class GroupNode extends BaseNode {
     return n;
   }
 
-  draw(): DrawPrimitive | undefined {
+  drawImpl(ctx: NodeDrawContext): RenderPrimitive | undefined {
     if (this.children.length == 0) {
       return undefined;
     }
 
-    let dp = new DrawGroup();
+    let rp = new RenderGroup();
     for (let c of this.children) {
-      let cdp = c.draw();
-      if (cdp) {
-        dp.children.push(cdp);
+      let crp = c.draw(ctx);
+      if (crp) {
+        rp.children.push(crp);
       }
     }
-    return dp;
+    return rp;
   }
 }
 
@@ -90,16 +124,16 @@ export class RectNode extends BaseNode {
   width: number;
   height: number;
 
-  draw(): DrawPrimitive {
-    let dp = new Path();
-    let sp = dp.newSubPath(new Vector(this.x, this.y));
+  drawImpl(ctx: NodeDrawContext): RenderPrimitive {
+    let rp = new RenderPath();
+    let sp = rp.newSubPath(new Vector(this.x, this.y));
     sp.lineTo(new Vector(this.x + this.width, this.y));
     sp.lineTo(new Vector(this.x + this.width, this.y + this.height));
     sp.lineTo(new Vector(this.x, this.y + this.height));
     sp.closed = true;
 
-    dp.fill = this.fill;
-    dp.stroke = this.stroke;
-    return dp;
+    rp.fill = this.fill;
+    rp.stroke = this.stroke;
+    return rp;
   }
 }

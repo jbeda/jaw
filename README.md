@@ -68,22 +68,22 @@ Start with defining core shapes and perhaps grouping. Play with typescript?
 - **Canvas**: A space that things are drawn into. Has a root **Node**. All
   other objects are created in a **Canvas** and can't be used across multiple.
 - **Node**: A drawable thing.
-  - method _Render_: Produces **DrawPrimitive**s that can be manipulated by
+  - method _draw_: Produces **RenderPrimitive**s that can be manipulated by
     other entities are eventually concretely rendered to the screen.
     - [idea] May be called multiple times in multple contexts to generate different content
       based on a render index.
   - attribute _parent_
   - attribute _children_: a list of **Node**s
-  - attribute _attributes_: a list **AttributeSet**s
+  - Multiple members that are **AttributeSet**
   - attribute _modifiers_: a list of **Modifier**s
 - **AttributeSet**: A set of attributes that is attached to a Node. Can be
   enabled/disabled. The set of these is hardcoded. Some allow for inheritence down the
   **Node** hierarchy.
 - **Modifier**: Rendering middleware. Takes a set of **DrawPrimitives**,
   modifies them and returns a set of **DrawPrimitives**.
-- **DrawPrimitive**: a thing that can be drawn. Need more detail but likely to
+- **RenderPrimitive**: a thing that can be drawn. Need more detail but likely to
   start with a simple path construct.
-- Core Types: Color, Vector, more?
+- Core Types: Color, Vector, AffineMatrix
 - **ValueGenerator**: a thing that produce values that can be referenced in
   various places. Probably includes timelines and noise functions.
 - **ValueFunction**: A function takes a **RenderContext** and returns a concrete
@@ -102,9 +102,11 @@ _(So far!)_
 1. Canvas has root to a hierarchy of Nodes.
 1. Main calls `Canvas.doRender`
    1. Background is cleared
-   1. `Node.draw` is called on root. This returns a DrawPrimitive.
-   1. `DrawPrimitive.htmlCanvasRender` is called on the DrawPrimitive to render
-      to HTML Canvas element.
+   1. `Node.draw` is called on root. This returns a RenderPrimitive. Context is
+      passed down with the accumulated transform to the root.
+   1. `RenderPrimitive.htmlCanvasRender` is called on the RenderPrimitive to render
+      to HTML Canvas element. This will set the transform into the Canvas2D
+      context automatically for each object during the recursive descent.
 
 ## Technologies to consider
 

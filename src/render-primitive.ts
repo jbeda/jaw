@@ -2,20 +2,42 @@ import { AffineMatrix } from './affine-matrix';
 import { Fill, Stroke } from './attributes';
 import { Vector } from './vector';
 
-export abstract class DrawPrimitive {
-  // Render this primitive to an HTML canvas.
-  abstract htmlCanvasRender(ctx: CanvasRenderingContext2D): void
+export class RenderContext {
+  transform: AffineMatrix = new AffineMatrix();
+}
 
-  // Apply a transformation to this primitive.  Modifies it in place.
+export abstract class RenderPrimitive {
+  transform?: AffineMatrix;
+
+  // Render this primitive to an HTML canvas.
+  htmlCanvasRender(ctx2d: CanvasRenderingContext2D, rc: RenderContext): void {
+    let m = rc.transform.clone();
+    if (this.transform) {
+      m.mul(this.transform);
+    }
+
+    // Do full save/restore here?
+    let prevCanvasMatrix = ctx2d.getTransform();
+    ctx2d.transform(m.a, m.b, m.c, m.d, m.tx, m.ty);
+    this.htmlCanvasRenderImpl(ctx2d, rc);
+    ctx2d.setTransform(prevCanvasMatrix);
+  }
+
+  protected abstract htmlCanvasRenderImpl(ctx2d: CanvasRenderingContext2D, rc: RenderContext): void
+
+  /** Apply a transformation to this primitive.  Modifies it in place.
+   * 
+   * This isn't used in the rendering path but rather as a utility method for Modifiers.
+   */
   abstract applyTransform(transform: AffineMatrix): void
 }
 
-export class DrawGroup extends DrawPrimitive {
-  children: Array<DrawPrimitive> = new Array<DrawPrimitive>();
+export class RenderGroup extends RenderPrimitive {
+  children: Array<RenderPrimitive> = new Array<RenderPrimitive>();
 
-  htmlCanvasRender(ctx: CanvasRenderingContext2D): void {
+  htmlCanvasRenderImpl(ctx2d: CanvasRenderingContext2D, rc: RenderContext): void {
     for (let c of this.children) {
-      c.htmlCanvasRender(ctx);
+      c.htmlCanvasRender(ctx2d, rc);
     }
   }
 
@@ -26,7 +48,7 @@ export class DrawGroup extends DrawPrimitive {
   }
 }
 
-export class Path extends DrawPrimitive {
+export class RenderPath extends RenderPrimitive {
   stroke?: Stroke;
   fill?: Fill;
 
@@ -38,13 +60,14 @@ export class Path extends DrawPrimitive {
     return subpath;
   }
 
-  htmlCanvasRender(ctx: CanvasRenderingContext2D): void {
+  htmlCanvasRenderImpl(ctx: CanvasRenderingContext2D, rc: RenderContext): void {
     let path2d = new Path2D();
     for (let sp of this.subpaths) {
       sp.addToCanvasPath(ctx, path2d);
     }
     if (this.fill && this.fill.enabled) {
-      ctx.fillStyle = this.fill.color.toCSSString();
+      let fillStyle = this.fill.color.toCSSString();
+      ctx.fillStyle = fillStyle;
       ctx.fill(path2d);
     }
     if (this.stroke && this.stroke.enabled) {
@@ -54,7 +77,9 @@ export class Path extends DrawPrimitive {
   }
 
   applyTransform(transform: AffineMatrix): void {
-    throw new Error("Method not implemented.");
+    for (let sp of this.subpaths) {
+      sp.applyTransform(transform);
+    }
   }
 
 }
@@ -69,6 +94,14 @@ export class SubPath {
     this.#start = start;
     this.closed = closed;
   }
+
+  applyTransform(transform: AffineMatrix) {
+    this.#start.transform(transform);
+    for (let cp of this.#controlPoints) {
+      cp.transform(transform);
+    }
+  }
+
 
   lineTo(end: Vector): void {
     this.#segmentTypes.push(SegmentType.LINE);

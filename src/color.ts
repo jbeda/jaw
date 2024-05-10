@@ -18,8 +18,8 @@ export class RGBColor implements Color {
   constructor(public v1: number, public v2: number, public v3: number, public a: number = 1.0) { }
 
   toCSSString(): string {
-    return `rgba(${(this.v1 * 255).toFixed(3)} ${(this.v2 * 255).toFixed(3)} `
-      + `${(this.v3 * 255).toFixed(3)} ${this.a.toFixed(3)})`;
+    return `rgb(${(this.v1 * 255).toFixed(3)}, ${(this.v2 * 255).toFixed(3)}, `
+      + `${(this.v3 * 255).toFixed(3)}, ${this.a.toFixed(3)})`;
   }
 }
 
@@ -40,8 +40,8 @@ export class HSBColor implements Color {
     } else {
       s_hsl = (b_hsb - l_hsl) / Math.min(l_hsl, 1 - l_hsl);
     }
-    return `hsla(${(h * 360).toFixed(3)} ${(s_hsl * 100).toFixed(3)}%`
-      + ` ${(l_hsl * 100).toFixed(3)}% ${this.a.toFixed(3)})`;
+    return `hsl(${(h * 360).toFixed(3)}, ${(s_hsl * 100).toFixed(3)}%, `
+      + `${(l_hsl * 100).toFixed(3)}%, ${this.a.toFixed(3)})`;
   }
 }
 
@@ -50,8 +50,8 @@ export class HSLColor implements Color {
   constructor(public v1: number, public v2: number, public v3: number, public a: number = 1.0) { }
 
   toCSSString(): string {
-    return `hsla(${(this.v1 * 360).toFixed(3)} ${(this.v2 * 100).toFixed(3)}% `
-      + `${(this.v3 * 100).toFixed(3)}% ${this.a.toFixed(3)})`;
+    return `hsl(${(this.v1 * 360).toFixed(3)}, ${(this.v2 * 100).toFixed(3)}%, `
+      + `${(this.v3 * 100).toFixed(3)}%, ${this.a.toFixed(3)})`;
   }
 }
 

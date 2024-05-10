@@ -10,7 +10,14 @@ export abstract class AttributeSet {
   constructor(enabled = true) {
     this.enabled = enabled;
   }
+
   enabled: boolean = true;
+  enable(): void {
+    this.enabled = true;
+  }
+  disable(): void {
+    this.enabled = false;
+  }
 }
 
 export class Fill extends AttributeSet {
@@ -51,9 +58,15 @@ export class Stroke extends AttributeSet {
   }
 }
 
-/** Core transformation information. Applied in order: scale, rotation and then position. */
+/** Core transformation information. Applied in order: scale, rotation and then translate. */
 export class Transform extends AttributeSet {
-  constructor(position?: Vector, rotation?: number, scale?: Vector, enabled = true) {
+  constructor(
+    position?: Vector,
+    rotation?: number,
+    scale?: Vector,
+    center?: Vector,
+    enabled = true
+  ) {
     super(enabled);
     if (position) {
       this.position = position;
@@ -64,10 +77,13 @@ export class Transform extends AttributeSet {
     if (scale) {
       this.scale = scale;
     }
+    if (center) {
+      this.center = center;
+    }
   }
 
   static createDefault(): Transform {
-    return new Transform(undefined, undefined, undefined, false);
+    return new Transform(undefined, undefined, undefined, undefined, false);
   }
 
   position: Vector = new Vector(0, 0);
@@ -89,11 +105,18 @@ export class Transform extends AttributeSet {
     return this;
   }
 
+  center: Vector = new Vector(0, 0);
+  setCenter(center: Vector): Transform {
+    this.center = center;
+    return this;
+  }
+
   getMatrix(): AffineMatrix {
     let m = new AffineMatrix();
     m.translate(this.position);
     m.rotate(this.rotation);
     m.scale(this.scale);
+    m.translate(this.center.negate());
     return m;
   }
 }

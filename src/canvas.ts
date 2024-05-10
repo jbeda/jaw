@@ -1,4 +1,7 @@
-import { GroupNode } from './nodes';
+import { Fill } from './attributes';
+import { RGBColor } from './color';
+import { GroupNode, NodeDrawContext } from './nodes';
+import { RenderContext } from './render-primitive';
 
 /** Canvas is the root thing that gets drawn. */
 export class Canvas {
@@ -30,17 +33,25 @@ export class Canvas {
     return this.#width;
   }
 
+  bgFill: Fill = new Fill(new RGBColor(0, 0, 0, 1));
+
   #root: GroupNode = new GroupNode(this);
   get root(): GroupNode {
     return this.#root;
   }
 
   doRender(): void {
-    this.#ctx.fillStyle = "red";
-    this.#ctx.fillRect(0, 0, this.#width, this.#height);
-    let dp = this.#root.draw();
+
+    if (this.bgFill.enabled) {
+      let fillStyle = this.bgFill.color.toCSSString();
+      this.#ctx.fillStyle = fillStyle;
+      this.#ctx.fillRect(0, 0, this.#width, this.#height);
+    }
+
+    let dp = this.#root.draw(new NodeDrawContext());
+
     if (dp) {
-      dp.htmlCanvasRender(this.#ctx);
+      dp.htmlCanvasRender(this.#ctx, new RenderContext());
     }
   }
 }
