@@ -19,17 +19,17 @@ export abstract class BaseNode {
     return undefined;
   }
 
-  fill: Fill = Fill.createDefault();
+  fill?: Fill;
   setFill(fill: Fill): BaseNode {
     this.fill = fill;
     return this;
   }
-  stroke: Stroke = Stroke.createDefault();
+  stroke?: Stroke;
   setStroke(stroke: Stroke): BaseNode {
     this.stroke = stroke;
     return this;
   }
-  transform: Transform = Transform.createDefault();
+  transform?: Transform;
   setTransform(transform: Transform): BaseNode {
     this.transform = transform;
     return this;
@@ -38,7 +38,7 @@ export abstract class BaseNode {
 
   draw(ctx: NodeDrawContext): RenderPrimitive | undefined {
     let c = ctx.clone();
-    let m = this.transform.enabled ? this.transform.getMatrix() : null;
+    let m = this.transform?.getMatrix();
     if (m) {
       c.matrix = c.matrix.mul(m);
     }

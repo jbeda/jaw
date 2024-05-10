@@ -65,12 +65,12 @@ export class RenderPath extends RenderPrimitive {
     for (let sp of this.subpaths) {
       sp.addToCanvasPath(ctx, path2d);
     }
-    if (this.fill && this.fill.enabled) {
+    if (this.fill) {
       let fillStyle = this.fill.color.toCSSString();
       ctx.fillStyle = fillStyle;
       ctx.fill(path2d);
     }
-    if (this.stroke && this.stroke.enabled) {
+    if (this.stroke) {
       ctx.strokeStyle = this.stroke.color.toCSSString();
       ctx.stroke(path2d);
     }

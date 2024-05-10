@@ -41,8 +41,7 @@ export class Canvas {
   }
 
   doRender(): void {
-
-    if (this.bgFill.enabled) {
+    if (this.bgFill) {
       let fillStyle = this.bgFill.color.toCSSString();
       this.#ctx.fillStyle = fillStyle;
       this.#ctx.fillRect(0, 0, this.#width, this.#height);

@@ -4,32 +4,11 @@ import { Color, RGBColor } from './color';
 
 export type CoreAttribute = number | string | boolean | Color | Vector;
 
-
-/** Holds a set of attributes. */
-export abstract class AttributeSet {
-  constructor(enabled = true) {
-    this.enabled = enabled;
-  }
-
-  enabled: boolean = true;
-  enable(): void {
-    this.enabled = true;
-  }
-  disable(): void {
-    this.enabled = false;
-  }
-}
-
-export class Fill extends AttributeSet {
-  constructor(color?: Color, enabled = true) {
-    super(enabled);
+export class Fill {
+  constructor(color?: Color) {
     if (color) {
       this.color = color;
     }
-  }
-
-  static createDefault(): Fill {
-    return new Fill(undefined, false);
   }
 
   color: Color = new RGBColor(0, 0, 0, 1);
@@ -39,17 +18,13 @@ export class Fill extends AttributeSet {
   }
 }
 
-export class Stroke extends AttributeSet {
-  constructor(color?: Color, enabled = true) {
-    super(enabled);
+export class Stroke {
+  constructor(color?: Color) {
     if (color) {
       this.color = color;
     }
   }
 
-  static createDefault(): Stroke {
-    return new Stroke(undefined, false);
-  }
 
   color: Color = new RGBColor(0, 0, 0, 1);
   setColor(color: Color): Stroke {
@@ -59,15 +34,13 @@ export class Stroke extends AttributeSet {
 }
 
 /** Core transformation information. Applied in order: scale, rotation and then translate. */
-export class Transform extends AttributeSet {
+export class Transform {
   constructor(
     position?: Vector,
     rotation?: number,
     scale?: Vector,
     center?: Vector,
-    enabled = true
   ) {
-    super(enabled);
     if (position) {
       this.position = position;
     }
@@ -80,10 +53,6 @@ export class Transform extends AttributeSet {
     if (center) {
       this.center = center;
     }
-  }
-
-  static createDefault(): Transform {
-    return new Transform(undefined, undefined, undefined, undefined, false);
   }
 
   position: Vector = new Vector(0, 0);

@@ -70,15 +70,14 @@ Start with defining core shapes and perhaps grouping. Play with typescript?
 - **Node**: A drawable thing.
   - method _draw_: Produces **RenderPrimitive**s that can be manipulated by
     other entities are eventually concretely rendered to the screen.
+    - Uses a **RenderContext** to pass down current transform along with
+      rendering attributes.
     - [idea] May be called multiple times in multple contexts to generate different content
       based on a render index.
   - attribute _parent_
   - attribute _children_: a list of **Node**s
-  - Multiple members that are **AttributeSet**
   - attribute _modifiers_: a list of **Modifier**s
-- **AttributeSet**: A set of attributes that is attached to a Node. Can be
-  enabled/disabled. The set of these is hardcoded. Some allow for inheritence down the
-  **Node** hierarchy.
+  - Core rendering attributes - transform, fill, stroke
 - **Modifier**: Rendering middleware. Takes a set of **DrawPrimitives**,
   modifies them and returns a set of **DrawPrimitives**.
 - **RenderPrimitive**: a thing that can be drawn. Need more detail but likely to
