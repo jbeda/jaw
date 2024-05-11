@@ -1,8 +1,21 @@
 import { Vector } from './vector';
 import { AffineMatrix } from './affine-matrix';
 import { Color, RGBColor } from './color';
+import { NodeDrawContext } from './nodes';
 
-export type CoreAttribute = number | string | boolean | Color | Vector;
+export class Attribute<T> {
+  constructor(value: T | ((ctx: NodeDrawContext) => T)) {
+    this.v = value;
+  }
+  v: T | ((ctx: NodeDrawContext) => T);
+
+  get(ctx: NodeDrawContext): T {
+    if (this.v instanceof Function) {
+      return (this.v as (ctx: NodeDrawContext) => T)(ctx);
+    }
+    return this.v as T;
+  }
+}
 
 export class Fill {
   constructor(color?: Color) {
@@ -45,7 +58,7 @@ export class Transform {
       this.position = position;
     }
     if (rotation) {
-      this.rotation = rotation;
+      this.rotation.v = rotation;
     }
     if (scale) {
       this.scale = scale;
@@ -62,11 +75,7 @@ export class Transform {
   }
 
   /** A rotation goes from 0 to 1 to ease animation. */
-  rotation: number = 0;
-  setRotation(rotation: number): Transform {
-    this.rotation = rotation;
-    return this;
-  }
+  rotation: Attribute<number> = new Attribute(0);
 
   scale: Vector = new Vector(1, 1);
   setScale(scale: Vector): Transform {
@@ -80,12 +89,12 @@ export class Transform {
     return this;
   }
 
-  getMatrix(): AffineMatrix {
+  getMatrix(ctx: NodeDrawContext): AffineMatrix {
     let m = new AffineMatrix();
     m.translate(this.position);
-    m.rotate(this.rotation);
+    m.rotate(this.rotation.get(ctx));
     m.scale(this.scale);
-    m.translate(this.center.negate());
+    m.translate(this.center.clone().negate());
     return m;
   }
 }

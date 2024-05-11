@@ -127,6 +127,8 @@ I'm leaning against this as often these are optimized around having changes
 we are likely to operate on a tick like a game engine we can just pull new
 values and reevaluate the entire scene each frame.
 
+Example: https://rxjs.dev/
+
 ### ECS
 
 Each node in the tree will have a set of optional attributes. We want this to

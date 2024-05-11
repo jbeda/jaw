@@ -3,7 +3,6 @@ import { Fill, Stroke } from './attributes';
 import { Vector } from './vector';
 
 export class RenderContext {
-  transform: AffineMatrix = new AffineMatrix();
 }
 
 export abstract class RenderPrimitive {
@@ -11,16 +10,17 @@ export abstract class RenderPrimitive {
 
   // Render this primitive to an HTML canvas.
   htmlCanvasRender(ctx2d: CanvasRenderingContext2D, rc: RenderContext): void {
-    let m = rc.transform.clone();
-    if (this.transform) {
-      m.mul(this.transform);
-    }
-
+    let m = this.transform;
     // Do full save/restore here?
-    let prevCanvasMatrix = ctx2d.getTransform();
-    ctx2d.transform(m.a, m.b, m.c, m.d, m.tx, m.ty);
+    let prevCanvasMatrix: DOMMatrix | null = null;
+    if (m) {
+      prevCanvasMatrix = ctx2d.getTransform();
+      ctx2d.transform(m.a, m.b, m.c, m.d, m.tx, m.ty);
+    }
     this.htmlCanvasRenderImpl(ctx2d, rc);
-    ctx2d.setTransform(prevCanvasMatrix);
+    if (m) {
+      ctx2d.setTransform(prevCanvasMatrix as DOMMatrix);
+    }
   }
 
   protected abstract htmlCanvasRenderImpl(ctx2d: CanvasRenderingContext2D, rc: RenderContext): void

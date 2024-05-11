@@ -40,14 +40,17 @@ export class Canvas {
     return this.#root;
   }
 
-  doRender(): void {
+  renderOnce(dctx: NodeDrawContext): void {
+    this.#ctx.reset();
+
     if (this.bgFill) {
       let fillStyle = this.bgFill.color.toCSSString();
       this.#ctx.fillStyle = fillStyle;
       this.#ctx.fillRect(0, 0, this.#width, this.#height);
     }
 
-    let dp = this.#root.draw(new NodeDrawContext());
+    dctx = dctx.clone();
+    let dp = this.#root.draw(dctx);
 
     if (dp) {
       dp.htmlCanvasRender(this.#ctx, new RenderContext());

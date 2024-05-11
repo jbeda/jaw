@@ -38,7 +38,7 @@ export abstract class BaseNode {
 
   draw(ctx: NodeDrawContext): RenderPrimitive | undefined {
     let c = ctx.clone();
-    let m = this.transform?.getMatrix();
+    let m = this.transform?.getMatrix(ctx);
     if (m) {
       c.matrix = c.matrix.mul(m);
     }
@@ -73,6 +73,8 @@ export class NodeDrawContext {
   fill?: Readonly<Fill>;
   stroke?: Readonly<Stroke>;
 
+  vars: { [n: string]: any } = {};
+
   clone(): NodeDrawContext {
     let c = new NodeDrawContext();
     c.matrix = this.matrix.clone();
@@ -81,11 +83,10 @@ export class NodeDrawContext {
     // replace them vs. modifying them.
     c.fill = this.fill;
     c.stroke = this.stroke;
+    c.vars = this.vars;
 
     return c;
   }
-
-  // TODO: implement attribute inheritance.
 }
 
 export class GroupNode extends BaseNode {
