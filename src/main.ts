@@ -7,7 +7,14 @@ import { Timeline } from './timeline';
 
 function main() {
   let c = new Canvas(document.getElementById('canvas') as HTMLCanvasElement);
-  c.bgFill = new Fill(new RGBColor(0, 0, 1));
+  c.clear(new RGBColor(0, 0, 0, 1));
+
+  // Create a "motion blur" effect by using an alpha channel to clear the
+  // background.  Since we don't have a fixed frame rate, base it on the frame
+  // time and aim for a 100ms fade.
+  c.bgFill = new Fill((ctx) => {
+    return new RGBColor(0, 0, 0, ctx.vars.time.frameTime / 1000 * 10);
+  });
 
   c.root.setFill(new Fill()
     .setColor((ctx) => {
@@ -17,14 +24,18 @@ function main() {
     })
   );
 
-  c.root.appendChild(new Nodes.RectNode(c, 0, 0, 100, 100))
+  c.root.appendChild(new Nodes.PolygonNode(7, 80))
     .setTransform(new Transform()
-      .setCenter(new Vector(50, 50))
       .setPosition(new Vector(100, 100))
       .setRotation((ctx) => {
         let t = ctx.vars.time as Timeline;
         return t.currentFrame / t.logicalFps / 10;
       })
+    );
+
+  c.root.appendChild(new Nodes.circleNode(50))
+    .setTransform(new Transform()
+      .setPosition(new Vector(200, 200))
     );
 
   let pctx = new Nodes.PlanContext();

@@ -1,5 +1,5 @@
 import { Fill } from './attributes';
-import { RGBColor } from './color';
+import { Color, RGBColor } from './color';
 import { GroupNode, PlanContext } from './nodes';
 import { RenderContext } from './render-primitive';
 
@@ -36,14 +36,17 @@ export class Canvas {
 
   bgFill: Fill = new Fill(new RGBColor(0, 0, 0, 1));
 
-  #root: GroupNode = new GroupNode(this);
+  #root: GroupNode = new GroupNode();
   get root(): GroupNode {
     return this.#root;
   }
 
-  renderOnce(pctx: PlanContext): void {
-    this.#ctx.reset();
+  clear(color: Color): void {
+    this.#ctx.fillStyle = color.toCSSString();
+    this.#ctx.fillRect(0, 0, this.#width, this.#height);
+  }
 
+  renderOnce(pctx: PlanContext): void {
     if (this.bgFill) {
       let fillStyle = this.bgFill.getColor(pctx).toCSSString();
       this.#ctx.fillStyle = fillStyle;

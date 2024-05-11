@@ -1,18 +1,13 @@
 import { Modifier } from 'typescript';
 import { Fill, Stroke, Transform, resolve } from './attributes';
-import { Canvas } from './canvas';
 import { RenderPlanGroup, RenderPlan, RenderPlanPath } from './render-primitive';
 import { Vector } from './vector';
 import { AffineMatrix } from './affine-matrix';
+import { Attr, resolveAttr } from './attributes';
+import { Path, SubPath } from './path';
 
 /** A thing that can contribute to rendering on a canvas. */
 export abstract class BaseNode {
-  constructor(c: Canvas) {
-    this.canvas = c;
-  }
-
-  readonly canvas: Canvas;
-
   parent?: BaseNode;
 
   get children(): Array<BaseNode> | undefined {
@@ -90,10 +85,6 @@ export class PlanContext {
 }
 
 export class GroupNode extends BaseNode {
-  constructor(c: Canvas) {
-    super(c);
-  }
-
   #children: Array<BaseNode> = new Array<BaseNode>();
   get children(): Array<BaseNode> {
     return this.#children;
@@ -127,29 +118,147 @@ export class GroupNode extends BaseNode {
   }
 }
 
-export class RectNode extends BaseNode {
-  constructor(c: Canvas, x: number, y: number, width: number, height: number) {
-    super(c);
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
+export class CornerRectNode extends BaseNode {
+  constructor(tl: Attr<Vector>, size: Attr<Vector>) {
+    super();
+    this.tl = tl;
+    this.size = size;
   }
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+
+  tl: Attr<Vector>;
+  size: Attr<Vector>;
 
   planImpl(ctx: PlanContext): RenderPlan {
     let rp = new RenderPlanPath();
-    let sp = rp.path.newSubPath(new Vector(this.x, this.y));
-    sp.lineTo(new Vector(this.x + this.width, this.y));
-    sp.lineTo(new Vector(this.x + this.width, this.y + this.height));
-    sp.lineTo(new Vector(this.x, this.y + this.height));
+
+    let tl = resolveAttr(this.tl, ctx);
+    let size = resolveAttr(this.size, ctx);
+
+    let sp = rp.path.newSubPath(tl);
+    sp.lineTo(new Vector(tl.x + size.x, tl.y));
+    sp.lineTo(new Vector(tl.x + size.x, tl.y + size.y));
+    sp.lineTo(new Vector(tl.x, tl.y + tl.y));
     sp.closed = true;
 
     rp.fill = resolve(ctx.fill, ctx);
     rp.stroke = resolve(ctx.stroke, ctx);
+    return rp;
+  }
+}
+
+export class CenterRectNode extends BaseNode {
+  constructor(center: Attr<Vector>, size: Attr<Vector>) {
+    super();
+    this.center = center;
+    this.size = size;
+  }
+
+  center: Attr<Vector>;
+  size: Attr<Vector>;
+
+  planImpl(ctx: PlanContext): RenderPlan {
+    let rp = new RenderPlanPath();
+
+    let center = resolveAttr(this.center, ctx);
+    let halfSize = resolveAttr(this.size, ctx).divScalar(2);
+
+    let sp = rp.path.newSubPath(new Vector(center.x - halfSize.x, center.y - halfSize.y));
+    sp.lineTo(new Vector(center.x + halfSize.x, center.y - halfSize.y));
+    sp.lineTo(new Vector(center.x + halfSize.x, center.y + halfSize.y));
+    sp.lineTo(new Vector(center.x - halfSize.x, center.y + halfSize.y));
+    sp.closed = true;
+
+    rp.fill = resolve(ctx.fill, ctx);
+    rp.stroke = resolve(ctx.stroke, ctx);
+    return rp;
+  }
+}
+
+export class PolygonNode extends BaseNode {
+  constructor(sides: Attr<number>, radius: Attr<number>) {
+    super();
+    this.sides = sides;
+    this.radius = radius;
+  }
+
+  sides: Attr<number>;
+  radius: Attr<number>
+
+  planImpl(ctx: PlanContext): RenderPlan {
+    let rp = new RenderPlanPath();
+
+    let sides = resolveAttr(this.sides, ctx);
+    let radius = resolveAttr(this.radius, ctx);
+
+    let radPerSide = Math.PI * 2 / sides;
+
+    let sp: SubPath;
+    for (let i = 0; i < sides; i++) {
+      let x = Math.sin(radPerSide * i) * radius;
+      let y = Math.cos(radPerSide * i) * radius;
+      if (i == 0) {
+        sp = rp.path.newSubPath(new Vector(x, y));
+      } else {
+        sp!.lineTo(new Vector(x, y));
+      }
+    }
+    sp!.closed = true;
+
+    rp.fill = resolve(ctx.fill, ctx);
+    rp.stroke = resolve(ctx.stroke, ctx);
+
+    return rp;
+  }
+}
+
+/** Adds an approximation of a quarter of a circle to the path.
+ * 
+ * See https://pomax.github.io/bezierinfo/#circles_cubic
+ */
+function makeCircularArc(sp: SubPath, p1: Vector, p2: Vector, hori: boolean): void {
+  const c = 0.551915024494;
+  const cp1 = p1.clone();
+  const cp2 = p2.clone();
+
+  if (hori) {
+    cp1.add(new Vector((p2.x - p1.x) * c, 0));
+    cp2.add(new Vector(0, (p1.y - p2.y) * c));
+  } else {
+    cp1.add(new Vector(0, (p2.y - p1.y) * c));
+    cp2.add(new Vector((p1.x - p2.x) * c, 0));
+  }
+  sp.bezierTo(cp1, cp2, p2);
+}
+
+export class circleNode extends BaseNode {
+  constructor(radius: Attr<number>) {
+    super();
+    this.radius = radius;
+  }
+
+  sides: Attr<number>;
+  radius: Attr<number>
+
+  planImpl(ctx: PlanContext): RenderPlan {
+    let rp = new RenderPlanPath();
+
+    let r = resolveAttr(this.radius, ctx);
+
+    const pts = [
+      new Vector(r, 0),
+      new Vector(0, r),
+      new Vector(-r, 0),
+      new Vector(0, -r),
+    ];
+    let sp: SubPath = rp.path.newSubPath(pts[0], true);
+    makeCircularArc(sp, pts[0], pts[1], false);
+    makeCircularArc(sp, pts[1], pts[2], true);
+    makeCircularArc(sp, pts[2], pts[3], false);
+    makeCircularArc(sp, pts[3], pts[0], true);
+
+    rp.fill = resolve(ctx.fill, ctx);
+    rp.stroke = resolve(ctx.stroke, ctx);
+
     return rp;
   }
 }
