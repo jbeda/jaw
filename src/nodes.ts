@@ -1,5 +1,5 @@
 import { Modifier } from 'typescript';
-import { Fill, Stroke, Transform } from './attributes';
+import { Fill, Stroke, Transform, resolve } from './attributes';
 import { Canvas } from './canvas';
 import { RenderGroup, RenderPrimitive, RenderPath } from './render-primitive';
 import { Vector } from './vector';
@@ -148,8 +148,8 @@ export class RectNode extends BaseNode {
     sp.lineTo(new Vector(this.x, this.y + this.height));
     sp.closed = true;
 
-    rp.fill = ctx.fill;
-    rp.stroke = ctx.stroke;
+    rp.fill = resolve(ctx.fill, ctx);
+    rp.stroke = resolve(ctx.stroke, ctx);
     return rp;
   }
 }

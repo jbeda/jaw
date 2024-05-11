@@ -44,7 +44,7 @@ export class Canvas {
     this.#ctx.reset();
 
     if (this.bgFill) {
-      let fillStyle = this.bgFill.color.toCSSString();
+      let fillStyle = this.bgFill.getColor(dctx).toCSSString();
       this.#ctx.fillStyle = fillStyle;
       this.#ctx.fillRect(0, 0, this.#width, this.#height);
     }

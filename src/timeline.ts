@@ -43,6 +43,6 @@ export class Timeline {
     this.#frameTime = timestamp - this.#tickTimestamp;
     this.#tickTimestamp = timestamp;
     this.#elapsedTime = timestamp - this.#startTimestamp;
-    this.#currentFrame = this.#elapsedTime / (1000 / this.logicalFps);
+    this.#currentFrame = (this.#elapsedTime / 1000) * this.logicalFps;
   }
 }

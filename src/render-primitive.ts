@@ -1,5 +1,5 @@
 import { AffineMatrix } from './affine-matrix';
-import { Fill, Stroke } from './attributes';
+import { Concrete, Fill, Stroke } from './attributes';
 import { Vector } from './vector';
 
 export class RenderContext {
@@ -49,8 +49,8 @@ export class RenderGroup extends RenderPrimitive {
 }
 
 export class RenderPath extends RenderPrimitive {
-  stroke?: Stroke;
-  fill?: Fill;
+  stroke?: Concrete<Stroke>;
+  fill?: Concrete<Fill>;
 
   readonly subpaths: Array<SubPath> = new Array<SubPath>();
 
@@ -71,7 +71,7 @@ export class RenderPath extends RenderPrimitive {
       ctx.fill(path2d);
     }
     if (this.stroke) {
-      ctx.strokeStyle = this.stroke.color.toCSSString();
+      ctx.strokeStyle = this.stroke.getColor.toCSSString();
       ctx.stroke(path2d);
     }
   }
