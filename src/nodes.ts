@@ -142,7 +142,7 @@ export class RectNode extends BaseNode {
 
   planImpl(ctx: PlanContext): RenderPlan {
     let rp = new RenderPlanPath();
-    let sp = rp.newSubPath(new Vector(this.x, this.y));
+    let sp = rp.path.newSubPath(new Vector(this.x, this.y));
     sp.lineTo(new Vector(this.x + this.width, this.y));
     sp.lineTo(new Vector(this.x + this.width, this.y + this.height));
     sp.lineTo(new Vector(this.x, this.y + this.height));
