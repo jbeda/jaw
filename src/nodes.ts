@@ -1,7 +1,7 @@
 import { Modifier } from 'typescript';
 import { Fill, Stroke, Transform, resolve } from './attributes';
 import { Canvas } from './canvas';
-import { RenderGroup, RenderPrimitive, RenderPath } from './render-primitive';
+import { RenderPlanGroup, RenderPlan, RenderPlanPath } from './render-primitive';
 import { Vector } from './vector';
 import { AffineMatrix } from './affine-matrix';
 
@@ -36,7 +36,7 @@ export abstract class BaseNode {
   }
   readonly modifiers: Array<Modifier> = new Array<Modifier>();
 
-  draw(ctx: NodeDrawContext): RenderPrimitive | undefined {
+  plan(ctx: PlanContext): RenderPlan | undefined {
     let c = ctx.clone();
     let m = this.transform?.getMatrix(ctx);
     if (m) {
@@ -50,7 +50,7 @@ export abstract class BaseNode {
       c.stroke = this.stroke;
     }
 
-    let rp = this.drawImpl(c);
+    let rp = this.planImpl(c);
 
     if (rp && m) {
       rp.transform = m.clone();
@@ -58,25 +58,25 @@ export abstract class BaseNode {
     return rp;
   }
 
-  /** Subclasses implement this to return their drawing primitives.
+  /** Subclasses implement this to return their rendering plan.
    * 
-   * Override this method to implement drawing for your node.  The context will
+   * Override this method to implement planning for your node.  The context will
    * automatically have your transform applied to it.  In addition, it will be
    * applied to all of your primitives automatically as you return.
    */
-  protected abstract drawImpl(ctx: NodeDrawContext): RenderPrimitive | undefined;
+  protected abstract planImpl(ctx: PlanContext): RenderPlan | undefined;
 
 }
 
-export class NodeDrawContext {
+export class PlanContext {
   matrix: AffineMatrix = new AffineMatrix();
   fill?: Readonly<Fill>;
   stroke?: Readonly<Stroke>;
 
   vars: { [n: string]: any } = {};
 
-  clone(): NodeDrawContext {
-    let c = new NodeDrawContext();
+  clone(): PlanContext {
+    let c = new PlanContext();
     c.matrix = this.matrix.clone();
 
     // We don't deep clone fill and stroke because, when traversing, we will
@@ -111,14 +111,14 @@ export class GroupNode extends BaseNode {
     return n;
   }
 
-  drawImpl(ctx: NodeDrawContext): RenderPrimitive | undefined {
+  planImpl(ctx: PlanContext): RenderPlan | undefined {
     if (this.children.length == 0) {
       return undefined;
     }
 
-    let rp = new RenderGroup();
+    let rp = new RenderPlanGroup();
     for (let c of this.children) {
-      let crp = c.draw(ctx);
+      let crp = c.plan(ctx);
       if (crp) {
         rp.children.push(crp);
       }
@@ -140,8 +140,8 @@ export class RectNode extends BaseNode {
   width: number;
   height: number;
 
-  drawImpl(ctx: NodeDrawContext): RenderPrimitive {
-    let rp = new RenderPath();
+  planImpl(ctx: PlanContext): RenderPlan {
+    let rp = new RenderPlanPath();
     let sp = rp.newSubPath(new Vector(this.x, this.y));
     sp.lineTo(new Vector(this.x + this.width, this.y));
     sp.lineTo(new Vector(this.x + this.width, this.y + this.height));

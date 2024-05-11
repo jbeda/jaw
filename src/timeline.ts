@@ -1,6 +1,6 @@
 /** Provides a frame counter. 
  *
- * Typically used in the passed down context to be evaluated during the draw
+ * Typically used in the passed down context to be evaluated during the planning
  * pass. 
  */
 export class Timeline {

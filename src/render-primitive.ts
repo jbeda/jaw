@@ -5,7 +5,7 @@ import { Vector } from './vector';
 export class RenderContext {
 }
 
-export abstract class RenderPrimitive {
+export abstract class RenderPlan {
   transform?: AffineMatrix;
 
   // Render this primitive to an HTML canvas.
@@ -32,8 +32,8 @@ export abstract class RenderPrimitive {
   abstract applyTransform(transform: AffineMatrix): void
 }
 
-export class RenderGroup extends RenderPrimitive {
-  children: Array<RenderPrimitive> = new Array<RenderPrimitive>();
+export class RenderPlanGroup extends RenderPlan {
+  children: Array<RenderPlan> = new Array<RenderPlan>();
 
   htmlCanvasRenderImpl(ctx2d: CanvasRenderingContext2D, rc: RenderContext): void {
     for (let c of this.children) {
@@ -48,7 +48,7 @@ export class RenderGroup extends RenderPrimitive {
   }
 }
 
-export class RenderPath extends RenderPrimitive {
+export class RenderPlanPath extends RenderPlan {
   stroke?: Concrete<Stroke>;
   fill?: Concrete<Fill>;
 

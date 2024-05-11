@@ -1,9 +1,10 @@
 import { Fill } from './attributes';
 import { RGBColor } from './color';
-import { GroupNode, NodeDrawContext } from './nodes';
+import { GroupNode, PlanContext } from './nodes';
 import { RenderContext } from './render-primitive';
 
-/** Canvas is the root thing that gets drawn. */
+/** Canvas the top level object that holds the root Node and knows how to
+ * coordinate rendering that to an underlying HTML Canvas element. */
 export class Canvas {
 
   constructor(cel: HTMLCanvasElement) {
@@ -40,17 +41,17 @@ export class Canvas {
     return this.#root;
   }
 
-  renderOnce(dctx: NodeDrawContext): void {
+  renderOnce(pctx: PlanContext): void {
     this.#ctx.reset();
 
     if (this.bgFill) {
-      let fillStyle = this.bgFill.getColor(dctx).toCSSString();
+      let fillStyle = this.bgFill.getColor(pctx).toCSSString();
       this.#ctx.fillStyle = fillStyle;
       this.#ctx.fillRect(0, 0, this.#width, this.#height);
     }
 
-    dctx = dctx.clone();
-    let dp = this.#root.draw(dctx);
+    pctx = pctx.clone();
+    let dp = this.#root.plan(pctx);
 
     if (dp) {
       dp.htmlCanvasRender(this.#ctx, new RenderContext());
@@ -64,7 +65,4 @@ export abstract class Modifier {
 
   // If the modifier is disabled, it will not show up when queried, by default.
   enabled: boolean = true;
-
-  // If dynamic is set to false, the modifier cannot be removed from the node.
-  dynamic: boolean = true;
 }

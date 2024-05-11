@@ -65,34 +65,40 @@ Start with defining core shapes and perhaps grouping. Play with typescript?
 
 ### Main Object Model
 
-- **Canvas**: A space that things are drawn into. Has a root **Node**. All
+- `Canvas`: A space that things are drawn into. Has a root **Node**. All
   other objects are created in a **Canvas** and can't be used across multiple.
-- **Node**: A drawable thing.
-  - method _draw_: Produces **RenderPrimitive**s that can be manipulated by
-    other entities are eventually concretely rendered to the screen.
-    - Uses a **RenderContext** to pass down current transform along with
-      rendering attributes.
+  - Currently has 1 implementation that is an HTML Canvas element.
+- `Node`: A drawable thing. It creates a plan that can then be rendered.
+  - method `Node.plan`: Produces `RenderPrimitive`s that can be manipulated by
+    other entities are eventually concretely rendered to the screen. Works
+    recursively down the node hierarchy.
+    - Uses a `PlanContext` to pass down current transform along with rendering
+      attributes.
     - [idea] May be called multiple times in multple contexts to generate different content
       based on a render index.
-  - attribute _parent_
-  - attribute _children_: a list of **Node**s
-  - attribute _modifiers_: a list of **Modifier**s
-  - Core rendering attributes - transform, fill, stroke
-  - It is expected that custom Nodes will be created.
-- **Modifier**: Rendering middleware. Takes a set of **DrawPrimitives**,
-  modifies them and returns a set of **DrawPrimitives**.
-- **RenderPrimitive**: a thing that can be drawn. Need more detail but likely to
-  start with a simple path construct. Generally, we don't expect users to
-  create new RenderPrimitives.
-- Core Types: Color, Vector, AffineMatrix
-- **ValueGenerator**: a thing that produce values that can be referenced in
-  various places. Probably includes timelines and noise functions.
-- **ValueFunction**: A function takes a **RenderContext** and returns a concrete
-  value used for rendering.
+  - attribute `parent`
+    - [idea] What would it look like for a `Node` to have multiple parents?
+      Inherited values are only avaiable during the Planning pass.
+  - attribute `children`: a list of `Node`s
+  - attribute `modifiers`: a list of `Modifier`s
+  - Core rendering attributes - `Transform`, `Fill`, `Stroke`
+  - It is expected that custom `Node`s will be created.
+- `Modifier`: Rendering middleware called during the planning pass.. Takes a
+  `DrawPrimitives`, modifies them and returns a `DrawPrimitives`. Has access to
+  the `PlanContext`.
+- `RenderPrimitive`: a thing that can be drawn. Right now just supports groups
+  and simple paths (lines and quadradic beziers).
+  - Generally, we don't expect users to create new RenderPrimitives.
+  - [idea] Extend with rasterization/composition layers.
+- _Value generators_: Things that produce values per frame in an interesting way.
+  Typically passed down to `Node.plan` via the context. Currently includes
+  `Timeline` object. Will include noise functions.
+- `Attr<T>`: Either a concrete value or a function takes a **PlanContext** and
+  returns a concrete value used for rendering.
   - _TODO_: Probably need to be able to take code and evaluate in an
     isolated/safe context.
-- **RenderContext**: An arbitrary bag of concrete data that can be used as
-  context when rendering.
+  - There are tools to take an object with `Attr`s and resolve them into a
+    parallel object with just concrete values.
 
 **TODO**: Do we make attributes self describing for GUIs?
 
@@ -101,20 +107,26 @@ Start with defining core shapes and perhaps grouping. Play with typescript?
 _(So far!)_
 
 1. Canvas has root to a hierarchy of Nodes.
-1. Main calls `Canvas.doRender`
+1. "Main" calls `Canvas.renderOnce` with a `PlanContext`
 
    1. Background is cleared using `Canvas.bgFill`
-   1. `Node.draw` is called on root. This returns a RenderPrimitive. Context is
-      passed down with the accumulated transform to the root. Context also
-      includes the inherited fill and stroke from parents.
+   1. **Planning Pass**: `Node.plan` is called on `Canvas.root`. This returns a
+      RenderPrimitive. Context (`PlanContext`) is passed down with the
+      accumulated transform to the root. Context also includes the inherited
+      fill and stroke from parents along with any othe properties that may be
+      used by nodes.
 
       Subclasses are meant to implement drawing logic in `Node.drawImpl`. The
       current node transform and attributes are applied before `Node.drawImpl`
       is called.
 
-   1. `RenderPrimitive.htmlCanvasRender` is called on the RenderPrimitive to render
-      to HTML Canvas element. This will set the transform into the Canvas2D
-      context automatically for each object during the recursive descent.
+      During the planning pass, any dynamic attributes are resolved to concrete
+      attributes before being used or baked into the plan.
+
+   1. \*_Rendering Pass_: `RenderPrimitive.htmlCanvasRender` is called on the
+      RenderPrimitive to render to HTML Canvas element. This will set the
+      transform into the Canvas2D context automatically for each object during
+      the recursive descent.
 
 ## Technologies to consider
 

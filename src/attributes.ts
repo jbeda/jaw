@@ -1,20 +1,20 @@
 import { Vector } from './vector';
 import { AffineMatrix } from './affine-matrix';
 import { Color, RGBColor } from './color';
-import { NodeDrawContext } from './nodes';
+import { PlanContext } from './nodes';
 
 
 /** A function to calculate an attribute value. */
-export type AttrFunc<T> = (ctx: NodeDrawContext) => T;
+export type AttrFunc<T> = (ctx: PlanContext) => T;
 
 /** An Attr can either be a concrete value or a function to return that value.
  * */
 export type Attr<T> = T | AttrFunc<T>;
 
 /** Resolve an attribute to a concrete value. */
-export function resolveAttr<T>(attr: Attr<T>, ctx: NodeDrawContext): T {
+export function resolveAttr<T>(attr: Attr<T>, ctx: PlanContext): T {
   if (attr instanceof Function) {
-    return (attr as (ctx: NodeDrawContext) => T)(ctx);
+    return (attr as (ctx: PlanContext) => T)(ctx);
   }
   return attr as T;
 }
@@ -26,7 +26,7 @@ export type Concrete<T> = {
 
 /** Return a Concrete version where all Attr's are resolved to real values. */
 export function resolve<T>(
-  o: T | undefined, ctx: NodeDrawContext
+  o: T | undefined, ctx: PlanContext
 ): Concrete<T> | undefined {
   if (!o) {
     return undefined;
@@ -51,13 +51,10 @@ export class Fill {
     this.color = color;
     return this;
   }
-  getColor(ctx: NodeDrawContext): Color {
+  getColor(ctx: PlanContext): Color {
     return resolveAttr(this.color, ctx);
   }
 }
-
-type foo = Extract<keyof Fill, string>;
-
 
 export class Stroke {
   constructor(color?: Attr<Color>) {
@@ -71,7 +68,7 @@ export class Stroke {
     this.color = color;
     return this;
   }
-  getColor(ctx: NodeDrawContext): Color {
+  getColor(ctx: PlanContext): Color {
     return resolveAttr(this.color, ctx);
   }
 }
@@ -103,7 +100,7 @@ export class Transform {
     this.position = position;
     return this;
   }
-  getPosition(ctx: NodeDrawContext): Vector {
+  getPosition(ctx: PlanContext): Vector {
     return resolveAttr(this.position, ctx);
   }
 
@@ -113,7 +110,7 @@ export class Transform {
     this.rotation = rotation;
     return this;
   }
-  getRotation(ctx: NodeDrawContext): number {
+  getRotation(ctx: PlanContext): number {
     return resolveAttr(this.rotation, ctx);
   }
 
@@ -122,7 +119,7 @@ export class Transform {
     this.scale = scale;
     return this;
   }
-  getScale(ctx: NodeDrawContext): Vector {
+  getScale(ctx: PlanContext): Vector {
     return resolveAttr(this.scale, ctx);
   }
 
@@ -131,11 +128,11 @@ export class Transform {
     this.center = center;
     return this;
   }
-  getCenter(ctx: NodeDrawContext): Vector {
+  getCenter(ctx: PlanContext): Vector {
     return resolveAttr(this.center, ctx);
   }
 
-  getMatrix(ctx: NodeDrawContext): AffineMatrix {
+  getMatrix(ctx: PlanContext): AffineMatrix {
     let m = new AffineMatrix();
     m.translate(this.getPosition(ctx));
     m.rotate(this.getRotation(ctx));
