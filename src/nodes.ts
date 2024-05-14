@@ -1,6 +1,6 @@
 import { Modifier } from 'typescript';
 import { Fill, Stroke, Transform, resolve } from './attributes';
-import { RenderPlanGroup, RenderPlan, RenderPlanPath } from './render-primitive';
+import { RenderPlanGroup, RenderPlan, RenderPlanPath } from './render-plan';
 import { Vector } from './vector';
 import { AffineMatrix } from './affine-matrix';
 import { Attr, resolveAttr } from './attributes';
@@ -32,23 +32,17 @@ export abstract class BaseNode {
   readonly modifiers: Array<Modifier> = new Array<Modifier>();
 
   plan(ctx: PlanContext): RenderPlan | undefined {
-    let c = ctx.clone();
-    let m = this.transform?.getMatrix(ctx);
-    if (m) {
-      c.matrix = c.matrix.mul(m);
-    }
+    ctx = ctx.clone();
+    let rp = this.planImpl(ctx);
+    if (rp) {
+      let m = this.transform?.getMatrix(ctx);
+      if (m) {
+        rp.applyTransform(m)
+      }
 
-    if (this.fill) {
-      c.fill = this.fill;
-    }
-    if (this.stroke) {
-      c.stroke = this.stroke;
-    }
-
-    let rp = this.planImpl(c);
-
-    if (rp && m) {
-      rp.transform = m.clone();
+      if (this.fill || this.stroke) {
+        rp.applyStyle(resolve(this.fill, ctx), resolve(this.stroke, ctx));
+      }
     }
     return rp;
   }
@@ -64,22 +58,16 @@ export abstract class BaseNode {
 }
 
 export class PlanContext {
-  matrix: AffineMatrix = new AffineMatrix();
-  fill?: Readonly<Fill>;
-  stroke?: Readonly<Stroke>;
-
-  vars: { [n: string]: any } = {};
+  [n: string]: any;
 
   clone(): PlanContext {
     let c = new PlanContext();
-    c.matrix = this.matrix.clone();
 
-    // We don't deep clone fill and stroke because, when traversing, we will
-    // replace them vs. modifying them.
-    c.fill = this.fill;
-    c.stroke = this.stroke;
-    c.vars = this.vars;
+    for (let k in this) {
+      c[k] = this[k];
 
+      // Deep clone if a "clone" method exists on property?
+    }
     return c;
   }
 }
@@ -167,9 +155,6 @@ export class CenterRectNode extends BaseNode {
     sp.lineTo(new Vector(center.x + halfSize.x, center.y + halfSize.y));
     sp.lineTo(new Vector(center.x - halfSize.x, center.y + halfSize.y));
     sp.closed = true;
-
-    rp.fill = resolve(ctx.fill, ctx);
-    rp.stroke = resolve(ctx.stroke, ctx);
     return rp;
   }
 }
@@ -203,10 +188,6 @@ export class PolygonNode extends BaseNode {
       }
     }
     sp!.closed = true;
-
-    rp.fill = resolve(ctx.fill, ctx);
-    rp.stroke = resolve(ctx.stroke, ctx);
-
     return rp;
   }
 }
@@ -255,9 +236,6 @@ export class circleNode extends BaseNode {
     makeCircularArc(sp, pts[1], pts[2], true);
     makeCircularArc(sp, pts[2], pts[3], false);
     makeCircularArc(sp, pts[3], pts[0], true);
-
-    rp.fill = resolve(ctx.fill, ctx);
-    rp.stroke = resolve(ctx.stroke, ctx);
 
     return rp;
   }

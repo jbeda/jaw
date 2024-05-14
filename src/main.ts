@@ -13,12 +13,12 @@ function main() {
   // background.  Since we don't have a fixed frame rate, base it on the frame
   // time and aim for a 100ms fade.
   c.bgFill = new Fill((ctx) => {
-    return new RGBColor(0, 0, 0, ctx.vars.time.frameTime / 1000 * 10);
+    return new RGBColor(0, 0, 0, ctx.time.frameTime / 1000 * 10);
   });
 
   c.root.setFill(new Fill()
     .setColor((ctx) => {
-      let t = ctx.vars.time as Timeline;
+      let t = ctx.time as Timeline;
       let r = t.currentFrame / t.logicalFps;
       return new HSBColor(r, 1, 1);
     })
@@ -28,7 +28,7 @@ function main() {
     .setTransform(new Transform()
       .setPosition(new Vector(100, 100))
       .setRotation((ctx) => {
-        let t = ctx.vars.time as Timeline;
+        let t = ctx.time as Timeline;
         return t.currentFrame / t.logicalFps / 10;
       })
     );
@@ -39,7 +39,7 @@ function main() {
     );
 
   let pctx = new Nodes.PlanContext();
-  let time = pctx.vars.time = new Timeline(performance.now());
+  let time = pctx.time = new Timeline(performance.now());
 
   let spanCurFrame = document.getElementById('current-frame') as HTMLSpanElement;
   let spanElapsed = document.getElementById('elapsed-time') as HTMLSpanElement;

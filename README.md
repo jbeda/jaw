@@ -111,10 +111,14 @@ _(So far!)_
 
    1. Background is cleared using `Canvas.bgFill`
    1. **Planning Pass**: `Node.plan` is called on `Canvas.root`. This returns a
-      RenderPrimitive. Context (`PlanContext`) is passed down with the
-      accumulated transform to the root. Context also includes the inherited
-      fill and stroke from parents along with any othe properties that may be
-      used by nodes.
+      `RenderPlan`. Context (`PlanContext`) is passed down with from the root.
+      Context is limited to that exposed explicitly by the user.  Each node
+      doesn't know it's position in the world or the overriding style (fill,
+      stroke).
+
+      After each node does returns their `RenderPlan` transforms and styles are
+      applied.  Styles on parent elements (`RenderPlanGroup`) will override any
+      styles applied by lower level `Node`s.
 
       Subclasses are meant to implement drawing logic in `Node.drawImpl`. The
       current node transform and attributes are applied before `Node.drawImpl`
@@ -124,9 +128,8 @@ _(So far!)_
       attributes before being used or baked into the plan.
 
    1. \*_Rendering Pass_: `RenderPrimitive.htmlCanvasRender` is called on the
-      RenderPrimitive to render to HTML Canvas element. This will set the
-      transform into the Canvas2D context automatically for each object during
-      the recursive descent.
+      RenderPrimitive to render to HTML Canvas element. This is a relatively
+      straightforward translation of the `RenderPlan` to Canvas2D API calls.
 
 ## Technologies to consider
 

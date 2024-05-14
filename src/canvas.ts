@@ -1,7 +1,7 @@
 import { Fill } from './attributes';
 import { Color, RGBColor } from './color';
 import { GroupNode, PlanContext } from './nodes';
-import { RenderContext } from './render-primitive';
+import { RenderContext } from './render-plan';
 
 /** Canvas the top level object that holds the root Node and knows how to
  * coordinate rendering that to an underlying HTML Canvas element. */

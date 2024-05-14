@@ -10,12 +10,18 @@ export interface Color {
   v1, v2, v3, a: number
   mode: COLOR_MODE;
 
+  clone(): Color;
+
   toCSSString(): string;
 }
 
 export class RGBColor implements Color {
   mode = COLOR_MODE.RGB;
   constructor(public v1: number, public v2: number, public v3: number, public a: number = 1.0) { }
+
+  clone(): Color {
+    return new RGBColor(this.v1, this.v2, this.v3, this.a);
+  }
 
   toCSSString(): string {
     return `rgb(${(this.v1 * 255).toFixed(3)}, ${(this.v2 * 255).toFixed(3)}, `
@@ -26,6 +32,10 @@ export class RGBColor implements Color {
 export class HSBColor implements Color {
   mode = COLOR_MODE.HSB;
   constructor(public v1: number, public v2: number, public v3: number, public a: number = 1.0) {
+  }
+
+  clone(): Color {
+    return new HSBColor(this.v1, this.v2, this.v3, this.a);
   }
 
   toCSSString(): string {
@@ -48,6 +58,10 @@ export class HSBColor implements Color {
 export class HSLColor implements Color {
   mode = COLOR_MODE.HSL;
   constructor(public v1: number, public v2: number, public v3: number, public a: number = 1.0) { }
+
+  clone(): Color {
+    return new HSLColor(this.v1, this.v2, this.v3, this.a);
+  }
 
   toCSSString(): string {
     return `hsl(${(this.v1 * 360).toFixed(3)}, ${(this.v2 * 100).toFixed(3)}%, `

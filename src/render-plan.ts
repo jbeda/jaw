@@ -1,5 +1,5 @@
 import { AffineMatrix } from './affine-matrix';
-import { Concrete, Fill, Stroke } from './attributes';
+import { Concrete, Fill, Stroke, cloneConcreteAttrBag } from './attributes';
 import { Path } from './path';
 import { Vector } from './vector';
 
@@ -7,30 +7,18 @@ export class RenderContext {
 }
 
 export abstract class RenderPlan {
-  transform?: AffineMatrix;
-
   // Render this primitive to an HTML canvas.
   htmlCanvasRender(ctx2d: CanvasRenderingContext2D, rc: RenderContext): void {
-    let m = this.transform;
-    // Do full save/restore here?
-    let prevCanvasMatrix: DOMMatrix | null = null;
-    if (m) {
-      prevCanvasMatrix = ctx2d.getTransform();
-      ctx2d.transform(m.a, m.b, m.c, m.d, m.tx, m.ty);
-    }
     this.htmlCanvasRenderImpl(ctx2d, rc);
-    if (m) {
-      ctx2d.setTransform(prevCanvasMatrix as DOMMatrix);
-    }
   }
 
   protected abstract htmlCanvasRenderImpl(ctx2d: CanvasRenderingContext2D, rc: RenderContext): void
 
   /** Apply a transformation to this primitive.  Modifies it in place.
-   * 
-   * This isn't used in the rendering path but rather as a utility method for Modifiers.
    */
   abstract applyTransform(transform: AffineMatrix): void
+
+  abstract applyStyle(fill?: Concrete<Fill>, stroke?: Concrete<Stroke>): void
 }
 
 export class RenderPlanGroup extends RenderPlan {
@@ -45,6 +33,15 @@ export class RenderPlanGroup extends RenderPlan {
   applyTransform(transform: AffineMatrix): void {
     for (let c of this.children) {
       c.applyTransform(transform);
+    }
+  }
+
+  applyStyle(
+    fill?: Concrete<Fill> | undefined,
+    stroke?: Concrete<Stroke> | undefined
+  ): void {
+    for (let c of this.children) {
+      c.applyStyle(fill, stroke);
     }
   }
 }
@@ -73,5 +70,10 @@ export class RenderPlanPath extends RenderPlan {
 
   applyTransform(transform: AffineMatrix): void {
     this.path.applyTransform(transform);
+  }
+
+  applyStyle(fill?: Concrete<Fill>, stroke?: Concrete<Stroke>): void {
+    this.fill = cloneConcreteAttrBag(fill);
+    this.stroke = cloneConcreteAttrBag(stroke);
   }
 }

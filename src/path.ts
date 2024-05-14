@@ -24,7 +24,7 @@ export class Path {
 
 export class SubPath {
   constructor(start: Vector, closed: boolean = true) {
-    this.#start = start;
+    this.#start = start.clone();
     this.closed = closed;
   }
 
@@ -35,17 +35,16 @@ export class SubPath {
     }
   }
 
-
   lineTo(end: Vector): void {
     this.#segmentTypes.push(SegmentType.LINE);
-    this.#controlPoints.push(end);
+    this.#controlPoints.push(end.clone());
   }
 
   bezierTo(control1: Vector, control2: Vector, end: Vector): void {
     this.#segmentTypes.push(SegmentType.CUBIC_BEZIER);
-    this.#controlPoints.push(control1);
-    this.#controlPoints.push(control2);
-    this.#controlPoints.push(end);
+    this.#controlPoints.push(control1.clone());
+    this.#controlPoints.push(control2.clone());
+    this.#controlPoints.push(end.clone());
   }
 
   addToCanvasPath(ctx: CanvasRenderingContext2D, path2d: Path2D): void {
