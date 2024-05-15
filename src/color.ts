@@ -67,7 +67,7 @@ export class Color {
         let b_hsb = this.v3;
 
         let l_hsl = b_hsb * (1 - s_hsb / 2);
-        let s_hsl;
+        let s_hsl: number = 0;
         if (l_hsl == 0 || l_hsl == 1) {
           s_hsb = 0;
         } else {

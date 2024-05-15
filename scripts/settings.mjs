@@ -1,4 +1,5 @@
 import esbuildCopyStaticFiles from 'esbuild-copy-static-files';
+import esbuildPluginTsc from 'esbuild-plugin-tsc';
 
 const staticDir = './static';
 const srcDir = './src';
@@ -14,6 +15,9 @@ export function createBuildSettings(options) {
       esbuildCopyStaticFiles({
         src: staticDir,
         dest: wwwDir,
+      }),
+      esbuildPluginTsc({
+        force: true,
       }),
     ],
     ...options,
