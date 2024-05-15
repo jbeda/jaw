@@ -1,10 +1,8 @@
-import { Modifier } from 'typescript';
-import { Fill, Stroke, Transform, resolve } from './attributes';
+import { DynamicAttr, DynamicAttrBag, DynamicFill, DynamicGenericAttrBag, DynamicStroke, DynamicTransform, getTransformMatrix, resolve, resolveDynamicAttr } from './attributes';
 import { RenderPlanGroup, RenderPlan, RenderPlanPath } from './render-plan';
 import { Vector } from './vector';
-import { AffineMatrix } from './affine-matrix';
-import { Attr, resolveAttr } from './attributes';
-import { Path, SubPath } from './path';
+import { SubPath } from './path';
+import { Modifier } from './modifiers';
 
 /** A thing that can contribute to rendering on a canvas. */
 export abstract class BaseNode {
@@ -14,18 +12,18 @@ export abstract class BaseNode {
     return undefined;
   }
 
-  fill?: Fill;
-  setFill(fill: Fill): BaseNode {
+  fill?: DynamicFill;
+  setFill(fill: DynamicFill): BaseNode {
     this.fill = fill;
     return this;
   }
-  stroke?: Stroke;
-  setStroke(stroke: Stroke): BaseNode {
+  stroke?: DynamicStroke;
+  setStroke(stroke: DynamicStroke): BaseNode {
     this.stroke = stroke;
     return this;
   }
-  transform?: Transform;
-  setTransform(transform: Transform): BaseNode {
+  transform?: DynamicTransform;
+  setTransform(transform: DynamicTransform): BaseNode {
     this.transform = transform;
     return this;
   }
@@ -35,13 +33,15 @@ export abstract class BaseNode {
     ctx = ctx.clone();
     let rp = this.planImpl(ctx);
     if (rp) {
-      let m = this.transform?.getMatrix(ctx);
+      let m = getTransformMatrix(this.transform, ctx);
       if (m) {
         rp.applyTransform(m)
       }
 
       if (this.fill || this.stroke) {
-        rp.applyStyle(resolve(this.fill, ctx), resolve(this.stroke, ctx));
+        rp.applyStyle(
+          this.fill ? resolve(this.fill, ctx) : undefined,
+          this.stroke ? resolve(this.stroke, ctx) : undefined);
       }
     }
     return rp;
@@ -57,17 +57,25 @@ export abstract class BaseNode {
 
 }
 
+// TODO: need to noodle on this more.  Should this be an AttrBag? When/how do
+// dynamic attributes get resolved? Is there a dependency order to them?
+// Circular references?
 export class PlanContext {
-  [n: string]: any;
+  attrs: { [key: string]: any } = {};
 
-  clone(): PlanContext {
+  clone(extra?: DynamicGenericAttrBag): PlanContext {
     let c = new PlanContext();
 
-    for (let k in this) {
-      c[k] = this[k];
-
-      // Deep clone if a "clone" method exists on property?
+    for (let k in this.attrs) {
+      c.attrs[k] = this.attrs[k];
     }
+
+    if (extra !== undefined) {
+      for (let k in extra) {
+        c.attrs[k] = extra[k];
+      }
+    }
+
     return c;
   }
 }
@@ -107,20 +115,20 @@ export class GroupNode extends BaseNode {
 }
 
 export class CornerRectNode extends BaseNode {
-  constructor(tl: Attr<Vector>, size: Attr<Vector>) {
+  constructor(tl: DynamicAttr<Vector>, size: DynamicAttr<Vector>) {
     super();
     this.tl = tl;
     this.size = size;
   }
 
-  tl: Attr<Vector>;
-  size: Attr<Vector>;
+  tl: DynamicAttr<Vector>;
+  size: DynamicAttr<Vector>;
 
   planImpl(ctx: PlanContext): RenderPlan {
     let rp = new RenderPlanPath();
 
-    let tl = resolveAttr(this.tl, ctx);
-    let size = resolveAttr(this.size, ctx);
+    let tl = resolveDynamicAttr(this.tl, ctx);
+    let size = resolveDynamicAttr(this.size, ctx);
 
     let sp = rp.path.newSubPath(tl);
     sp.lineTo(new Vector(tl.x + size.x, tl.y));
@@ -128,27 +136,25 @@ export class CornerRectNode extends BaseNode {
     sp.lineTo(new Vector(tl.x, tl.y + tl.y));
     sp.closed = true;
 
-    rp.fill = resolve(ctx.fill, ctx);
-    rp.stroke = resolve(ctx.stroke, ctx);
     return rp;
   }
 }
 
 export class CenterRectNode extends BaseNode {
-  constructor(center: Attr<Vector>, size: Attr<Vector>) {
+  constructor(center: DynamicAttr<Vector>, size: DynamicAttr<Vector>) {
     super();
     this.center = center;
     this.size = size;
   }
 
-  center: Attr<Vector>;
-  size: Attr<Vector>;
+  center: DynamicAttr<Vector>;
+  size: DynamicAttr<Vector>;
 
   planImpl(ctx: PlanContext): RenderPlan {
     let rp = new RenderPlanPath();
 
-    let center = resolveAttr(this.center, ctx);
-    let halfSize = resolveAttr(this.size, ctx).divScalar(2);
+    let center = resolveDynamicAttr(this.center, ctx);
+    let halfSize = resolveDynamicAttr(this.size, ctx).divScalar(2);
 
     let sp = rp.path.newSubPath(new Vector(center.x - halfSize.x, center.y - halfSize.y));
     sp.lineTo(new Vector(center.x + halfSize.x, center.y - halfSize.y));
@@ -160,20 +166,20 @@ export class CenterRectNode extends BaseNode {
 }
 
 export class PolygonNode extends BaseNode {
-  constructor(sides: Attr<number>, radius: Attr<number>) {
+  constructor(sides: DynamicAttr<number>, radius: DynamicAttr<number>) {
     super();
     this.sides = sides;
     this.radius = radius;
   }
 
-  sides: Attr<number>;
-  radius: Attr<number>
+  sides: DynamicAttr<number>;
+  radius: DynamicAttr<number>
 
   planImpl(ctx: PlanContext): RenderPlan {
     let rp = new RenderPlanPath();
 
-    let sides = resolveAttr(this.sides, ctx);
-    let radius = resolveAttr(this.radius, ctx);
+    let sides = resolveDynamicAttr(this.sides, ctx);
+    let radius = resolveDynamicAttr(this.radius, ctx);
 
     let radPerSide = Math.PI * 2 / sides;
 
@@ -212,18 +218,17 @@ function makeCircularArc(sp: SubPath, p1: Vector, p2: Vector, hori: boolean): vo
 }
 
 export class circleNode extends BaseNode {
-  constructor(radius: Attr<number>) {
+  constructor(radius: DynamicAttr<number>) {
     super();
     this.radius = radius;
   }
 
-  sides: Attr<number>;
-  radius: Attr<number>
+  radius: DynamicAttr<number>
 
   planImpl(ctx: PlanContext): RenderPlan {
     let rp = new RenderPlanPath();
 
-    let r = resolveAttr(this.radius, ctx);
+    let r = resolveDynamicAttr(this.radius, ctx);
 
     const pts = [
       new Vector(r, 0),

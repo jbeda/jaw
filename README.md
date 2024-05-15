@@ -131,6 +131,34 @@ _(So far!)_
       RenderPrimitive to render to HTML Canvas element. This is a relatively
       straightforward translation of the `RenderPlan` to Canvas2D API calls.
 
+### Thoughts on context and modifiers
+
+What should we put in the context that is passed down to the nodes during the
+planning phase?  Originally I had the transform to the parent along with style
+(fill/stroke) but I removed that and had that be applied outside of the node
+rendering.
+
+The key insight here is that we don't want to create dependency loops.  A key
+modifier will be something like "grid" that will take the children and replicate
+them in a grid.  Do we do this by calling "plan" on the children multiple times?
+Or by having the modifier the `RenderPlan`?  Or both?
+
+Current plan:
+1. Context has no "automatic" data but only that which is explictly set on it by
+  parent nodes.
+1. Modifiers have a method called `createContexts` that takes in the context and
+   returns an array of contexts.  The children are then called to plan for
+   each context.
+
+   It is expected that the modifier can create multiple contexts with, say, an
+   index embedded in it at some point.  Or any other data that it wants children
+   to key off of.
+1. Modifiers then also have a method called `modify`.  This is provided an array
+   of `RenderPlan`s and returns an array of `RenderPlan`s.  The input has one rp
+   per context created.  The modifier can then do whatever it wants with the
+   input.  It could clone or collapse or position the sub `RenderPlan`s in any
+   way that makes sense.
+
 ## Technologies to consider
 
 What are libraries or other technologies that I might want to consider.

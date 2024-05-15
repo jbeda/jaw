@@ -1,7 +1,6 @@
 import { AffineMatrix } from './affine-matrix';
-import { Cloneable } from './util';
 
-export class Vector implements Cloneable<Vector> {
+export class Vector {
   constructor(public x: number = 0, public y: number = 0) {
   }
 

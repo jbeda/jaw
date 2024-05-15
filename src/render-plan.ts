@@ -1,7 +1,6 @@
 import { AffineMatrix } from './affine-matrix';
-import { Concrete, Fill, Stroke, cloneConcreteAttrBag } from './attributes';
+import { Fill, Stroke, cloneConcreteAttrBag } from './attributes';
 import { Path } from './path';
-import { Vector } from './vector';
 
 export class RenderContext {
 }
@@ -18,7 +17,11 @@ export abstract class RenderPlan {
    */
   abstract applyTransform(transform: AffineMatrix): void
 
-  abstract applyStyle(fill?: Concrete<Fill>, stroke?: Concrete<Stroke>): void
+  /** Apply a style to this primitive, recursively.  Modifies it in place.
+   * 
+   * If fill or stroke is undefined then the nothing will be set.
+   */
+  abstract applyStyle(fill: Fill | undefined, stroke: Stroke | undefined): void
 }
 
 export class RenderPlanGroup extends RenderPlan {
@@ -37,8 +40,8 @@ export class RenderPlanGroup extends RenderPlan {
   }
 
   applyStyle(
-    fill?: Concrete<Fill> | undefined,
-    stroke?: Concrete<Stroke> | undefined
+    fill: Fill | undefined,
+    stroke: Stroke | undefined
   ): void {
     for (let c of this.children) {
       c.applyStyle(fill, stroke);
@@ -47,8 +50,8 @@ export class RenderPlanGroup extends RenderPlan {
 }
 
 export class RenderPlanPath extends RenderPlan {
-  stroke?: Concrete<Stroke>;
-  fill?: Concrete<Fill>;
+  stroke?: Stroke;
+  fill?: Fill;
 
   path: Path = new Path();
 
@@ -57,13 +60,13 @@ export class RenderPlanPath extends RenderPlan {
     for (let sp of this.path.subpaths) {
       sp.addToCanvasPath(ctx, path2d);
     }
-    if (this.fill) {
-      let fillStyle = this.fill.color.toCSSString();
+    if (this.fill !== undefined && this.fill.color !== undefined) {
+      let fillStyle = this.fill.color?.toCSSString();
       ctx.fillStyle = fillStyle;
       ctx.fill(path2d);
     }
-    if (this.stroke) {
-      ctx.strokeStyle = this.stroke.getColor.toCSSString();
+    if (this.stroke !== undefined && this.stroke.color !== undefined) {
+      ctx.strokeStyle = this.stroke.color.toCSSString();
       ctx.stroke(path2d);
     }
   }
@@ -72,8 +75,12 @@ export class RenderPlanPath extends RenderPlan {
     this.path.applyTransform(transform);
   }
 
-  applyStyle(fill?: Concrete<Fill>, stroke?: Concrete<Stroke>): void {
-    this.fill = cloneConcreteAttrBag(fill);
-    this.stroke = cloneConcreteAttrBag(stroke);
+  applyStyle(fill: Fill | undefined, stroke: Stroke | undefined): void {
+    if (fill !== undefined) {
+      this.fill = cloneConcreteAttrBag(fill);
+    }
+    if (stroke !== undefined) {
+      this.stroke = cloneConcreteAttrBag(stroke);
+    }
   }
 }

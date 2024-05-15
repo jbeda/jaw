@@ -1,5 +1,5 @@
-import { Fill } from './attributes';
-import { Color, RGBColor } from './color';
+import { DynamicFill, resolve } from './attributes';
+import { Color } from './color';
 import { GroupNode, PlanContext } from './nodes';
 import { RenderContext } from './render-plan';
 
@@ -34,7 +34,7 @@ export class Canvas {
     return this.#width;
   }
 
-  bgFill: Fill = new Fill(new RGBColor(0, 0, 0, 1));
+  bgFill: DynamicFill = { color: new Color(0, 0, 0, 1) };
 
   #root: GroupNode = new GroupNode();
   get root(): GroupNode {
@@ -47,8 +47,8 @@ export class Canvas {
   }
 
   renderOnce(pctx: PlanContext): void {
-    if (this.bgFill) {
-      let fillStyle = this.bgFill.getColor(pctx).toCSSString();
+    if (this.bgFill != undefined && this.bgFill.color != undefined) {
+      let fillStyle = resolve(this.bgFill, pctx).color!.toCSSString();
       this.#ctx.fillStyle = fillStyle;
       this.#ctx.fillRect(0, 0, this.#width, this.#height);
     }
@@ -62,10 +62,3 @@ export class Canvas {
   }
 }
 
-/**  A Modifier can be attached to a Node. Only one instance of each type of
- * Modifier can be attached at a time. */
-export abstract class Modifier {
-
-  // If the modifier is disabled, it will not show up when queried, by default.
-  enabled: boolean = true;
-}
