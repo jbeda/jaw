@@ -9,6 +9,14 @@ enum SegmentType {
 export class Path {
   readonly subpaths: Array<SubPath> = new Array<SubPath>();
 
+  getPath2D(): Path2D {
+    let path2D = new Path2D();
+    for (let sp of this.subpaths) {
+      sp.addToCanvasPath(path2D);
+    }
+    return path2D;
+  }
+
   newSubPath(start: Vector, closed: boolean = true): SubPath {
     let subpath = new SubPath(start, closed);
     this.subpaths.push(subpath);
@@ -47,7 +55,7 @@ export class SubPath {
     this.#controlPoints.push(end.clone());
   }
 
-  addToCanvasPath(ctx: CanvasRenderingContext2D, path2d: Path2D): void {
+  addToCanvasPath(path2d: Path2D): void {
     path2d.moveTo(this.#start.x, this.#start.y);
     let ixp = 0;
     for (let t of this.#segmentTypes) {

@@ -40,6 +40,13 @@ export function cloneConcreteAttrBag<T>(o: ConcreteAttrBag<T>): ConcreteAttrBag<
   return ret;
 }
 
+export function cloneOptionalConcreteAttrBag<T>(o: ConcreteAttrBag<T> | undefined): ConcreteAttrBag<T> | undefined {
+  if (o === undefined) {
+    return undefined;
+  }
+  return cloneConcreteAttrBag(o);
+}
+
 //==============================================================================
 // DynamicAttr
 
@@ -51,7 +58,7 @@ export type DynamicAttr<T extends ConcreteAttrTypes> = T | AttrFunc<T>;
 
 export type OptionalDynamicAttr<T extends ConcreteAttrTypes> = DynamicAttr<T> | undefined;
 
-/** Clone an attribute if possible */
+/** Clone an attribute */
 export function cloneDynamicAttr<T extends ConcreteAttrTypes>(attr: DynamicAttr<T>): DynamicAttr<T> {
   if (attr instanceof Function) {
     return attr;
@@ -60,12 +67,30 @@ export function cloneDynamicAttr<T extends ConcreteAttrTypes>(attr: DynamicAttr<
   return cloneConcreteAttrType(attr);
 }
 
+/** Clone an optional attribute */
+export function cloneOptionalDynamicAttr<T extends ConcreteAttrTypes>(attr: OptionalDynamicAttr<T>): OptionalDynamicAttr<T> {
+  if (attr === undefined) {
+    return undefined;
+  }
+
+  return cloneDynamicAttr(attr);
+}
+
 /** Resolve an attribute to a concrete value. */
 export function resolveDynamicAttr<T extends ConcreteAttrTypes>(attr: DynamicAttr<T>, ctx: PlanContext): T {
   if (attr instanceof Function) {
     return (attr as (ctx: PlanContext) => T)(ctx);
   }
   return attr;
+}
+
+/** Resolve an optional attribute to a concrete value. */
+export function resolveOptionalDynamicAttr<T extends ConcreteAttrTypes>(attr: OptionalDynamicAttr<T>, ctx: PlanContext): T | undefined {
+  if (attr === undefined) {
+    return undefined;
+  }
+
+  return resolveDynamicAttr(attr, ctx);
 }
 
 //==============================================================================
@@ -88,6 +113,26 @@ export type DynamicAttrBag<T extends ConcreteAttrBag<T>> = {
   /**/ : never;
 };
 
+
+export function cloneDynamicAttrBag<T extends ConcreteAttrBag<T>>(
+  o: DynamicAttrBag<T>
+): DynamicAttrBag<T> {
+  let ret = {} as DynamicAttrBag<T>;
+  for (let k in o) {
+    ret[k] = cloneOptionalDynamicAttr(o[k]) as any;
+  }
+  return ret;
+}
+
+export function cloneOptionalDynamicAttrBag<T extends ConcreteAttrBag<T>>(
+  o: DynamicAttrBag<T> | undefined
+): DynamicAttrBag<T> | undefined {
+  if (o === undefined) {
+    return undefined;
+  }
+  return cloneDynamicAttrBag(o);
+}
+
 /** Resolve every member of a DynamicAttrBag and return a ConcreteAttrBag. */
 export function resolve<T extends ConcreteAttrBag<T>>(
   o: DynamicAttrBag<T>, ctx: PlanContext
@@ -97,6 +142,15 @@ export function resolve<T extends ConcreteAttrBag<T>>(
     ret[k] = o[k] !== undefined ? resolveDynamicAttr(o[k]!, ctx) : undefined;
   }
   return ret;
+}
+
+export function resolveOptional<T extends ConcreteAttrBag<T>>(
+  o: DynamicAttrBag<T> | undefined, ctx: PlanContext
+): ConcreteAttrBag<T> | undefined {
+  if (o === undefined) {
+    return undefined;
+  }
+  return resolve(o, ctx);
 }
 
 //==============================================================================

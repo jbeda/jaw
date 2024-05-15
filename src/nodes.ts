@@ -1,4 +1,4 @@
-import { DynamicAttr, DynamicAttrBag, DynamicFill, DynamicGenericAttrBag, DynamicStroke, DynamicTransform, getTransformMatrix, resolve, resolveDynamicAttr } from './attributes';
+import { DynamicAttr, DynamicAttrBag, DynamicFill, DynamicGenericAttrBag, DynamicStroke, DynamicTransform, cloneDynamicAttr, cloneOptionalDynamicAttr, cloneOptionalDynamicAttrBag, getTransformMatrix, resolve, resolveDynamicAttr } from './attributes';
 import { RenderPlanGroup, RenderPlan, RenderPlanPath } from './render-plan';
 import { Vector } from './vector';
 import { SubPath } from './path';
@@ -13,20 +13,24 @@ export abstract class BaseNode {
   }
 
   fill?: DynamicFill;
-  setFill(fill: DynamicFill): BaseNode {
-    this.fill = fill;
+  setFill(fill: DynamicFill | undefined): BaseNode {
+    this.fill = cloneOptionalDynamicAttrBag(fill)
     return this;
   }
+
   stroke?: DynamicStroke;
-  setStroke(stroke: DynamicStroke): BaseNode {
-    this.stroke = stroke;
+  setStroke(stroke: DynamicStroke | undefined): BaseNode {
+    this.stroke = cloneOptionalDynamicAttrBag(stroke);
     return this;
+
   }
+
   transform?: DynamicTransform;
-  setTransform(transform: DynamicTransform): BaseNode {
-    this.transform = transform;
+  setTransform(transform: DynamicTransform | undefined): BaseNode {
+    this.transform = cloneOptionalDynamicAttrBag(transform);
     return this;
   }
+
   readonly modifiers: Array<Modifier> = new Array<Modifier>();
 
   plan(ctx: PlanContext): RenderPlan | undefined {
@@ -60,6 +64,7 @@ export abstract class BaseNode {
 // TODO: need to noodle on this more.  Should this be an AttrBag? When/how do
 // dynamic attributes get resolved? Is there a dependency order to them?
 // Circular references?
+// TODO: What do we need to clone when here?
 export class PlanContext {
   attrs: { [key: string]: any } = {};
 
@@ -117,8 +122,8 @@ export class GroupNode extends BaseNode {
 export class CornerRectNode extends BaseNode {
   constructor(tl: DynamicAttr<Vector>, size: DynamicAttr<Vector>) {
     super();
-    this.tl = tl;
-    this.size = size;
+    this.tl = cloneDynamicAttr(tl);
+    this.size = cloneDynamicAttr(size);
   }
 
   tl: DynamicAttr<Vector>;
@@ -143,8 +148,8 @@ export class CornerRectNode extends BaseNode {
 export class CenterRectNode extends BaseNode {
   constructor(center: DynamicAttr<Vector>, size: DynamicAttr<Vector>) {
     super();
-    this.center = center;
-    this.size = size;
+    this.center = cloneDynamicAttr(center);
+    this.size = cloneDynamicAttr(size);
   }
 
   center: DynamicAttr<Vector>;
@@ -168,8 +173,8 @@ export class CenterRectNode extends BaseNode {
 export class PolygonNode extends BaseNode {
   constructor(sides: DynamicAttr<number>, radius: DynamicAttr<number>) {
     super();
-    this.sides = sides;
-    this.radius = radius;
+    this.sides = cloneDynamicAttr(sides);
+    this.radius = cloneDynamicAttr(radius);
   }
 
   sides: DynamicAttr<number>;
@@ -220,7 +225,7 @@ function makeCircularArc(sp: SubPath, p1: Vector, p2: Vector, hori: boolean): vo
 export class circleNode extends BaseNode {
   constructor(radius: DynamicAttr<number>) {
     super();
-    this.radius = radius;
+    this.radius = cloneDynamicAttr(radius);
   }
 
   radius: DynamicAttr<number>

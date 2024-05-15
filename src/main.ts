@@ -4,6 +4,7 @@ import { Color } from './color';
 import * as Nodes from './nodes';
 import { Vector } from './vector';
 import { Timeline } from './timeline';
+import { LinearRepeat } from './modifiers';
 
 function main() {
   let c = new Canvas(document.getElementById('canvas') as HTMLCanvasElement);
@@ -25,6 +26,8 @@ function main() {
       return Color.createHSB(r, 1, 1);
     }
   });
+
+  c.root.modifiers.push(new LinearRepeat(10, new Vector(50, 0), 'repeatIndex'));
 
   c.root.appendChild(new Nodes.PolygonNode(7, 80))
     .setTransform({

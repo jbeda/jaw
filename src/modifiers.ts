@@ -1,12 +1,10 @@
 import { AffineMatrix } from './affine-matrix';
-import { DynamicAttr, resolveDynamicAttr } from './attributes';
+import { DynamicAttr, cloneDynamicAttr, cloneOptionalDynamicAttr, resolveDynamicAttr, resolveOptionalDynamicAttr } from './attributes';
 import { PlanContext } from './nodes';
 import { RenderPlan } from './render-plan';
 import { Vector } from './vector';
 
 export class Modifier {
-  enabled: DynamicAttr<boolean> = true;
-
   createContexts(ctx: PlanContext): PlanContext[] {
     return [ctx];
   }
@@ -18,12 +16,19 @@ export class Modifier {
 
 export class LinearRepeat extends Modifier {
   count: DynamicAttr<number> = 3;
-  repAttrName?: DynamicAttr<string> = 'repeatIndex';
-  offset: DynamicAttr<Vector> = new Vector(50, 0)
+  offset: DynamicAttr<Vector> = new Vector(50, 0);
+  repAttrName: DynamicAttr<string> = 'repeatIndex';
+
+  constructor(count: DynamicAttr<number>, offset?: DynamicAttr<Vector>, repAttrName?: DynamicAttr<string>) {
+    super();
+    this.count = cloneDynamicAttr(count);
+    this.offset = cloneOptionalDynamicAttr(offset) ?? new Vector(50, 0);
+    this.repAttrName = cloneOptionalDynamicAttr(repAttrName) ?? 'repeatIndex';
+  }
 
   createContexts(ctx: PlanContext): PlanContext[] {
     let ret: PlanContext[] = [];
-    let repAttrName = this.repAttrName ? resolveDynamicAttr(this.repAttrName, ctx) : undefined;
+    let repAttrName = resolveOptionalDynamicAttr(this.repAttrName, ctx);
     let count = Math.trunc(resolveDynamicAttr(this.count, ctx));
     let offset = resolveDynamicAttr(this.offset, ctx);
 
@@ -39,8 +44,7 @@ export class LinearRepeat extends Modifier {
   }
 
   plan(rps: RenderPlan[], ctx: PlanContext,): RenderPlan[] {
-
-    let offset = resolveDynamicAttr(this.offset, ctx)!;
+    let offset = resolveDynamicAttr(this.offset, ctx);
     for (const [i, rp] of rps.entries()) {
       let effoffset = offset.clone().mulScalar(i);
       rp.applyTransform(AffineMatrix.fromTranslate(effoffset));

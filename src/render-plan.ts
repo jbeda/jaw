@@ -56,18 +56,16 @@ export class RenderPlanPath extends RenderPlan {
   path: Path = new Path();
 
   htmlCanvasRenderImpl(ctx: CanvasRenderingContext2D, rc: RenderContext): void {
-    let path2d = new Path2D();
-    for (let sp of this.path.subpaths) {
-      sp.addToCanvasPath(ctx, path2d);
-    }
+
+    let path2D = this.path.getPath2D();
+
     if (this.fill !== undefined && this.fill.color !== undefined) {
-      let fillStyle = this.fill.color?.toCSSString();
-      ctx.fillStyle = fillStyle;
-      ctx.fill(path2d);
+      ctx.fillStyle = this.fill.color.toCSSString();
+      ctx.fill(path2D);
     }
     if (this.stroke !== undefined && this.stroke.color !== undefined) {
       ctx.strokeStyle = this.stroke.color.toCSSString();
-      ctx.stroke(path2d);
+      ctx.stroke(path2D);
     }
   }
 
