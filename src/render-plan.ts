@@ -24,6 +24,8 @@ export abstract class RenderPlan {
   abstract applyStyle(fill: Fill | undefined, stroke: Stroke | undefined): void
 }
 
+export type OptionalRenderPlan = RenderPlan | undefined;
+
 export class RenderPlanGroup extends RenderPlan {
   children: Array<RenderPlan> = new Array<RenderPlan>();
 

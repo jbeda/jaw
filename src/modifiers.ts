@@ -1,7 +1,7 @@
 import { AffineMatrix } from './affine-matrix';
 import { DynamicAttr, cloneDynamicAttr, cloneOptionalDynamicAttr, resolveDynamicAttr, resolveOptionalDynamicAttr } from './attributes';
 import { PlanContext } from './nodes';
-import { RenderPlan } from './render-plan';
+import { OptionalRenderPlan } from './render-plan';
 import { Vector } from './vector';
 
 export class Modifier {
@@ -9,7 +9,7 @@ export class Modifier {
     return [ctx];
   }
 
-  plan(rps: RenderPlan[] | undefined, ctx: PlanContext,): RenderPlan[] | undefined {
+  plan(rps: OptionalRenderPlan[], ctx: PlanContext,): OptionalRenderPlan[] {
     return rps;
   }
 }
@@ -36,16 +36,20 @@ export class LinearRepeat extends Modifier {
       for (let i = 0; i < count; i++) {
         ret.push(ctx.clone({
           [repAttrName]: i,
-          offset: offset.mulScalar(i),
+          offset: offset.clone().mulScalar(i + 1),
         }));
       }
     }
     return ret;
   }
 
-  plan(rps: RenderPlan[], ctx: PlanContext,): RenderPlan[] {
+  plan(rps: OptionalRenderPlan[], ctx: PlanContext,): OptionalRenderPlan[] {
     let offset = resolveDynamicAttr(this.offset, ctx);
     for (const [i, rp] of rps.entries()) {
+      if (rp === undefined) {
+        continue;
+      }
+
       let effoffset = offset.clone().mulScalar(i);
       rp.applyTransform(AffineMatrix.fromTranslate(effoffset));
     }

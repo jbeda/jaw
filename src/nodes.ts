@@ -1,5 +1,5 @@
-import { DynamicAttr, DynamicAttrBag, DynamicFill, DynamicGenericAttrBag, DynamicStroke, DynamicTransform, cloneDynamicAttr, cloneOptionalDynamicAttr, cloneOptionalDynamicAttrBag, getTransformMatrix, resolve, resolveDynamicAttr } from './attributes';
-import { RenderPlanGroup, RenderPlan, RenderPlanPath } from './render-plan';
+import { DynamicAttr, DynamicAttrBag, DynamicFill, DynamicGenericAttrBag, DynamicStroke, DynamicTransform, cloneDynamicAttr, cloneOptionalDynamicAttr, cloneOptionalDynamicAttrBag, getTransformMatrix, resolve, resolveDynamicAttr, resolveOptional } from './attributes';
+import { RenderPlanGroup, RenderPlan, RenderPlanPath, OptionalRenderPlan } from './render-plan';
 import { Vector } from './vector';
 import { SubPath } from './path';
 import { Modifier } from './modifiers';
@@ -33,22 +33,57 @@ export abstract class BaseNode {
 
   readonly modifiers: Array<Modifier> = new Array<Modifier>();
 
-  plan(ctx: PlanContext): RenderPlan | undefined {
-    ctx = ctx.clone();
-    let rp = this.planImpl(ctx);
-    if (rp) {
-      let m = getTransformMatrix(this.transform, ctx);
-      if (m) {
-        rp.applyTransform(m)
-      }
+  #planWithModifiers(ctx: PlanContext, iModifierIdx: number): RenderPlan | undefined {
+    // If we've already applied all modifiers then we plan the node itself.
+    if (iModifierIdx == -1) {
+      let rp = this.planImpl(ctx.clone());
+      if (rp) {
+        let m = getTransformMatrix(this.transform, ctx);
+        if (m) {
+          rp.applyTransform(m)
+        }
 
-      if (this.fill || this.stroke) {
-        rp.applyStyle(
-          this.fill ? resolve(this.fill, ctx) : undefined,
-          this.stroke ? resolve(this.stroke, ctx) : undefined);
+        if (this.fill || this.stroke) {
+          rp.applyStyle(
+            resolveOptional(this.fill, ctx),
+            resolveOptional(this.stroke, ctx));
+        }
       }
+      return rp;
     }
-    return rp;
+
+    // Ask the modifier to create any number of contexts.
+    let cctxs = this.modifiers[iModifierIdx].createContexts(ctx.clone());
+    // If a modifier doesn't give us any contexts then we skip it.
+    if (cctxs.length == 0) {
+      return this.#planWithModifiers(ctx, iModifierIdx - 1);
+    }
+
+    // For each context, call the next modifier or the node itself to get render plans.
+    let rps: OptionalRenderPlan[] = [];
+    for (let cctx of cctxs) {
+      rps.push(this.#planWithModifiers(cctx, iModifierIdx - 1));
+    }
+
+    // No apply this modifier to the render plans.
+    rps = this.modifiers[iModifierIdx].plan(rps, ctx);
+
+    // Package the result into a single render plan.
+    if (rps.length == 0) {
+      return undefined;
+    } else if (rps.length == 1) {
+      return rps[0];
+    } else if (rps.length > 1) {
+      let rpg = new RenderPlanGroup();
+      rpg.children = rps.filter((r) => r !== undefined) as RenderPlan[];
+      return rpg;
+    }
+
+    return undefined
+  }
+
+  plan(ctx: PlanContext): RenderPlan | undefined {
+    return this.#planWithModifiers(ctx, this.modifiers.length - 1);
   }
 
   /** Subclasses implement this to return their rendering plan.

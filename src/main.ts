@@ -27,7 +27,8 @@ function main() {
     }
   });
 
-  c.root.modifiers.push(new LinearRepeat(10, new Vector(50, 0), 'repeatIndex'));
+  c.root.modifiers.push(
+    new LinearRepeat(3, new Vector(50, 0), 'repeatIndex'));
 
   c.root.appendChild(new Nodes.PolygonNode(7, 80))
     .setTransform({
