@@ -1,59 +1,39 @@
-import { DynamicAttr, DynamicAttrBag, DynamicFill, DynamicGenericAttrBag, DynamicStroke, DynamicTransform, cloneDynamicAttr, cloneOptionalDynamicAttr, cloneOptionalDynamicAttrBag, getTransformMatrix, resolve, resolveDynamicAttr, resolveOptional } from './attributes';
-import { RenderPlanGroup, RenderPlan, RenderPlanPath, OptionalRenderPlan } from './render-plan';
-import { Vector } from './vector';
-import { SubPath } from './path';
+import { RenderPlanGroup, RenderPlan, RenderPlanPath, OptionalRenderPlan } from './graphics/render-plan';
+import { Vector } from './graphics/vector';
+import { SubPath } from './graphics/path';
 import { Modifier } from './modifiers';
+import { FillModifier, StrokeModifier, TransformModifier } from './stock-modifiers';
+import { AttrBag, AttrContext, AttrFunc, DynamicAttr } from './attributes';
 
 /** A thing that can contribute to rendering on a canvas. */
-export abstract class BaseNode {
-  parent?: BaseNode;
+export abstract class BaseNode extends AttrBag {
+  readonly fill: FillModifier = new FillModifier();
+  readonly stroke: StrokeModifier = new StrokeModifier();
+  readonly transform: TransformModifier = new TransformModifier();
 
-  get children(): Array<BaseNode> | undefined {
-    return undefined;
+  readonly customModifiers: Array<Modifier> = new Array<Modifier>();
+
+  getModifiers(): Array<Modifier> {
+    return new Array<Modifier>(this.fill, this.stroke, this.transform).concat(this.customModifiers);
   }
 
-  fill?: DynamicFill;
-  setFill(fill: DynamicFill | undefined): BaseNode {
-    this.fill = cloneOptionalDynamicAttrBag(fill)
-    return this;
-  }
-
-  stroke?: DynamicStroke;
-  setStroke(stroke: DynamicStroke | undefined): BaseNode {
-    this.stroke = cloneOptionalDynamicAttrBag(stroke);
-    return this;
-
-  }
-
-  transform?: DynamicTransform;
-  setTransform(transform: DynamicTransform | undefined): BaseNode {
-    this.transform = cloneOptionalDynamicAttrBag(transform);
-    return this;
-  }
-
-  readonly modifiers: Array<Modifier> = new Array<Modifier>();
-
-  #planWithModifiers(ctx: PlanContext, iModifierIdx: number): RenderPlan | undefined {
+  #planWithModifiers(ctx: AttrContext, iModifierIdx: number): RenderPlan | undefined {
     // If we've already applied all modifiers then we plan the node itself.
     if (iModifierIdx == -1) {
-      let rp = this.planImpl(ctx.clone());
-      if (rp) {
-        let m = getTransformMatrix(this.transform, ctx);
-        if (m) {
-          rp.applyTransform(m)
-        }
+      // Resolve the attributes for this node.
+      let resolvedCtx = new AttrContext(ctx);
+      this.evalAllToContext(resolvedCtx);
 
-        if (this.fill || this.stroke) {
-          rp.applyStyle(
-            resolveOptional(this.fill, ctx),
-            resolveOptional(this.stroke, ctx));
-        }
-      }
-      return rp;
+      return this.planImpl(resolvedCtx, ctx);
     }
 
+    // Handle modifier at iModifierIdx.
+    let mod = this.getModifiers()[iModifierIdx];
+    let innerCtx = new AttrContext(ctx);
+    mod.evalAllToContext(innerCtx);
+
     // Ask the modifier to create any number of contexts.
-    let cctxs = this.modifiers[iModifierIdx].createContexts(ctx.clone());
+    let cctxs = mod.createContexts(innerCtx, ctx);
     // If a modifier doesn't give us any contexts then we skip it.
     if (cctxs.length == 0) {
       return this.#planWithModifiers(ctx, iModifierIdx - 1);
@@ -66,7 +46,7 @@ export abstract class BaseNode {
     }
 
     // No apply this modifier to the render plans.
-    rps = this.modifiers[iModifierIdx].plan(rps, ctx);
+    rps = mod.plan(rps, innerCtx);
 
     // Package the result into a single render plan.
     if (rps.length == 0) {
@@ -78,46 +58,31 @@ export abstract class BaseNode {
       rpg.children = rps.filter((r) => r !== undefined) as RenderPlan[];
       return rpg;
     }
-
-    return undefined
   }
 
-  plan(ctx: PlanContext): RenderPlan | undefined {
-    return this.#planWithModifiers(ctx, this.modifiers.length - 1);
-  }
-
-  /** Subclasses implement this to return their rendering plan.
-   * 
-   * Override this method to implement planning for your node.  The context will
-   * automatically have your transform applied to it.  In addition, it will be
-   * applied to all of your primitives automatically as you return.
+  /**
+   * Create a RenderPlan for this node.
+   *
+   * @param ctx The context for this node to work with. This nodes attributes
+   * are not evaluated yet.
+   * @returns The render plan for this node or undefined if there is nothing to
+   * render.
    */
-  protected abstract planImpl(ctx: PlanContext): RenderPlan | undefined;
-
-}
-
-// TODO: need to noodle on this more.  Should this be an AttrBag? When/how do
-// dynamic attributes get resolved? Is there a dependency order to them?
-// Circular references?
-// TODO: What do we need to clone when here?
-export class PlanContext {
-  attrs: { [key: string]: any } = {};
-
-  clone(extra?: DynamicGenericAttrBag): PlanContext {
-    let c = new PlanContext();
-
-    for (let k in this.attrs) {
-      c.attrs[k] = this.attrs[k];
-    }
-
-    if (extra !== undefined) {
-      for (let k in extra) {
-        c.attrs[k] = extra[k];
-      }
-    }
-
-    return c;
+  plan(ctx: AttrContext): RenderPlan | undefined {
+    return this.#planWithModifiers(ctx, this.getModifiers().length - 1);
   }
+
+  /** 
+   * Subclasses implement this to return their rendering plan.
+   * 
+   * Override this method to implement planning for your node.
+   * 
+   * @param innerCtx The context with the evaluated parameters on this node.
+   * @param childCtx The context that will be passed to the children.
+   * @returns The render plan for this node or undefined if there is nothing to render.
+   */
+  protected abstract planImpl(innerCtx: AttrContext, childCtx: AttrContext): RenderPlan | undefined;
+
 }
 
 export class GroupNode extends BaseNode {
@@ -127,48 +92,50 @@ export class GroupNode extends BaseNode {
   }
 
   appendChild<T extends BaseNode>(n: T): T {
-    n.parent = this;
     this.#children.push(n);
     return n;
   }
 
   prependChild<T extends BaseNode>(n: T): T {
-    n.parent = this;
     this.#children.unshift(n);
     return n;
   }
 
-  planImpl(ctx: PlanContext): RenderPlan | undefined {
-    if (this.children.length == 0) {
-      return undefined;
-    }
-
-    let rp = new RenderPlanGroup();
+  planImpl(innerCtx: AttrContext, childCtx: AttrContext): RenderPlan | undefined {
+    // Call plan on all children and collect the results.
+    let rps: RenderPlan[] = [];
     for (let c of this.children) {
-      let crp = c.plan(ctx);
+      let crp = c.plan(childCtx);
       if (crp) {
-        rp.children.push(crp);
+        rps.push(crp);
       }
     }
-    return rp;
+
+    // Convert the results into a singluar render plan.
+    if (rps.length == 0) {
+      return undefined
+    } else if (rps.length == 1) {
+      return rps[0];
+    } else {
+      let rpg = new RenderPlanGroup();
+      rpg.children = rps.slice();
+      return rpg;
+    }
   }
 }
 
 export class CornerRectNode extends BaseNode {
-  constructor(tl: DynamicAttr<Vector>, size: DynamicAttr<Vector>) {
+  constructor(topleft: Vector | AttrFunc<Vector>, size: Vector | AttrFunc<Vector>) {
     super();
-    this.tl = cloneDynamicAttr(tl);
-    this.size = cloneDynamicAttr(size);
+    this.attrs.push(new DynamicAttr("topleft", topleft));
+    this.attrs.push(new DynamicAttr("size", size));
   }
 
-  tl: DynamicAttr<Vector>;
-  size: DynamicAttr<Vector>;
-
-  planImpl(ctx: PlanContext): RenderPlan {
+  planImpl(innerCtx: AttrContext, childCtx: AttrContext): RenderPlan {
     let rp = new RenderPlanPath();
 
-    let tl = resolveDynamicAttr(this.tl, ctx);
-    let size = resolveDynamicAttr(this.size, ctx);
+    let tl = innerCtx.get("topleft") as Vector;
+    let size = innerCtx.get("size") as Vector;
 
     let sp = rp.path.newSubPath(tl);
     sp.lineTo(new Vector(tl.x + size.x, tl.y));
@@ -181,20 +148,17 @@ export class CornerRectNode extends BaseNode {
 }
 
 export class CenterRectNode extends BaseNode {
-  constructor(center: DynamicAttr<Vector>, size: DynamicAttr<Vector>) {
+  constructor(center: Vector | AttrFunc<Vector>, size: Vector | AttrFunc<Vector>) {
     super();
-    this.center = cloneDynamicAttr(center);
-    this.size = cloneDynamicAttr(size);
+    this.attrs.push(new DynamicAttr("center", center));
+    this.attrs.push(new DynamicAttr("size", size));
   }
 
-  center: DynamicAttr<Vector>;
-  size: DynamicAttr<Vector>;
-
-  planImpl(ctx: PlanContext): RenderPlan {
+  planImpl(innerCtx: AttrContext, childCtx: AttrContext): RenderPlan {
     let rp = new RenderPlanPath();
 
-    let center = resolveDynamicAttr(this.center, ctx);
-    let halfSize = resolveDynamicAttr(this.size, ctx).divScalar(2);
+    let center = innerCtx.get("center") as Vector;
+    let halfSize = (innerCtx.get("size") as Vector).divScalar(2);
 
     let sp = rp.path.newSubPath(new Vector(center.x - halfSize.x, center.y - halfSize.y));
     sp.lineTo(new Vector(center.x + halfSize.x, center.y - halfSize.y));
@@ -206,20 +170,16 @@ export class CenterRectNode extends BaseNode {
 }
 
 export class PolygonNode extends BaseNode {
-  constructor(sides: DynamicAttr<number>, radius: DynamicAttr<number>) {
+  constructor(sides: number | AttrFunc<number>, radius: number | AttrFunc<number>) {
     super();
-    this.sides = cloneDynamicAttr(sides);
-    this.radius = cloneDynamicAttr(radius);
+    this.attrs.push(new DynamicAttr("sides", sides));
+    this.attrs.push(new DynamicAttr("radius", radius));
   }
-
-  sides: DynamicAttr<number>;
-  radius: DynamicAttr<number>
-
-  planImpl(ctx: PlanContext): RenderPlan {
+  planImpl(innerCtx: AttrContext, childCtx: AttrContext): RenderPlan {
     let rp = new RenderPlanPath();
 
-    let sides = resolveDynamicAttr(this.sides, ctx);
-    let radius = resolveDynamicAttr(this.radius, ctx);
+    let sides = innerCtx.get("sides") as number;
+    let radius = innerCtx.get("radius") as number;
 
     let radPerSide = Math.PI * 2 / sides;
 
@@ -258,17 +218,15 @@ function makeCircularArc(sp: SubPath, p1: Vector, p2: Vector, hori: boolean): vo
 }
 
 export class circleNode extends BaseNode {
-  constructor(radius: DynamicAttr<number>) {
+  constructor(radius: number | AttrFunc<number>) {
     super();
-    this.radius = cloneDynamicAttr(radius);
+    this.attrs.push(new DynamicAttr("radius", radius));
   }
 
-  radius: DynamicAttr<number>
-
-  planImpl(ctx: PlanContext): RenderPlan {
+  planImpl(innerCtx: AttrContext, childCtx: AttrContext): RenderPlan {
     let rp = new RenderPlanPath();
 
-    let r = resolveDynamicAttr(this.radius, ctx);
+    let r = innerCtx.get("radius") as number;
 
     const pts = [
       new Vector(r, 0),

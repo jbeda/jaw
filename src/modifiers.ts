@@ -1,50 +1,64 @@
-import { AffineMatrix } from './affine-matrix';
-import { DynamicAttr, cloneDynamicAttr, cloneOptionalDynamicAttr, resolveDynamicAttr, resolveOptionalDynamicAttr } from './attributes';
-import { PlanContext } from './nodes';
-import { OptionalRenderPlan } from './render-plan';
-import { Vector } from './vector';
+import { AffineMatrix } from './graphics/affine-matrix';
+import { AttrBag, AttrContext, AttrFunc, DynamicAttr } from './attributes';
+import { OptionalRenderPlan } from './graphics/render-plan';
+import { Vector } from './graphics/vector';
 
-export class Modifier {
-  createContexts(ctx: PlanContext): PlanContext[] {
-    return [ctx];
+export class Modifier extends AttrBag {
+  /** The derived class can return multiple contexts.
+   * 
+   * @param innerCtx The context with the evaluated parameters on this modifier.
+   * @param childCtx The context that will be passed to the children.
+   * @returns An array of contexts to be passed to the children derived from childCtx.
+   */
+  createContexts(innerCtx: AttrContext, childCtx: AttrContext): AttrContext[] {
+    // Create multiple contexts.  May have extra values on added.
+    // For each
+    return [childCtx];
   }
 
-  plan(rps: OptionalRenderPlan[], ctx: PlanContext,): OptionalRenderPlan[] {
+  /**
+   * This is where the modifier modifies the render plan.
+   * 
+   * @param rps Incoming render plans to be modified.
+   * @param innerCtx Context with the evaluated parameters on this modifier.
+   * @returns An array of render plans that have been modified.
+   */
+  plan(rps: OptionalRenderPlan[], innerCtx: AttrContext,): OptionalRenderPlan[] {
     return rps;
   }
 }
 
 export class LinearRepeat extends Modifier {
-  count: DynamicAttr<number> = 3;
-  offset: DynamicAttr<Vector> = new Vector(50, 0);
-  repAttrName: DynamicAttr<string> = 'repeatIndex';
-
-  constructor(count: DynamicAttr<number>, offset?: DynamicAttr<Vector>, repAttrName?: DynamicAttr<string>) {
+  constructor(
+    count: number | AttrFunc<number>,
+    offset?: Vector | AttrFunc<Vector>,
+    repAttrName?: string | AttrFunc<string>) {
     super();
-    this.count = cloneDynamicAttr(count);
-    this.offset = cloneOptionalDynamicAttr(offset) ?? new Vector(50, 0);
-    this.repAttrName = cloneOptionalDynamicAttr(repAttrName) ?? 'repeatIndex';
+
+    this.attrs.push(new DynamicAttr("count", count));
+    this.attrs.push(new DynamicAttr("offset", offset ?? new Vector(50, 0)));
+    this.attrs.push(new DynamicAttr("repAttrName", repAttrName ?? 'rep'));
   }
 
-  createContexts(ctx: PlanContext): PlanContext[] {
-    let ret: PlanContext[] = [];
-    let repAttrName = resolveOptionalDynamicAttr(this.repAttrName, ctx);
-    let count = Math.trunc(resolveDynamicAttr(this.count, ctx));
-    let offset = resolveDynamicAttr(this.offset, ctx);
+  createContexts(innerCtx: AttrContext, childCtx: AttrContext): AttrContext[] {
+    let ret: AttrContext[] = [];
+    let repAttrName = innerCtx.get("repAttrName") as string;
+    let count = Math.trunc(innerCtx.get("count") as number);
+    let offset = innerCtx.get("offset") as Vector;
 
     if (repAttrName !== undefined) {
       for (let i = 0; i < count; i++) {
-        ret.push(ctx.clone({
+        ret.push(new AttrContext(childCtx, {
           [repAttrName]: i,
-          offset: offset.clone().mulScalar(i + 1),
+          [repAttrName + "Offset"]: offset.clone().mulScalar(i + 1),
         }));
       }
     }
     return ret;
   }
 
-  plan(rps: OptionalRenderPlan[], ctx: PlanContext,): OptionalRenderPlan[] {
-    let offset = resolveDynamicAttr(this.offset, ctx);
+  plan(rps: OptionalRenderPlan[], innerCtx: AttrContext,): OptionalRenderPlan[] {
+    let offset = innerCtx.get("offset") as Vector;
     for (const [i, rp] of rps.entries()) {
       if (rp === undefined) {
         continue;

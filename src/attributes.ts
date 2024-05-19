@@ -1,15 +1,73 @@
-import { Vector } from './vector';
-import { AffineMatrix } from './affine-matrix';
-import { Color } from './color';
-import { PlanContext } from './nodes';
+import { Vector } from './graphics/vector';
+import { AffineMatrix } from './graphics/affine-matrix';
+import { Color } from './graphics/color';
 
 //==============================================================================
-// ConcreteAttrTypes
+/** Holds a set of values that are the context for evaluating Attrs.
+ * 
+ * Will look up a chain to find the first value that is defined.
+ */
+// TODO: consider using proxies to do magic stuff to ease usage.
+// Q: Do we just store concrete values or store dynamic values with memoization
+export class AttrContext {
+  readonly #parent: AttrContext | undefined;
+  readonly #values: Map<string, any> = new Map();
+  #locked: boolean = false;
+
+  constructor(parent?: AttrContext | undefined, values?: { [key: string]: any }) {
+    this.#parent = parent;
+    if (values) {
+      this.setAll(values);
+    }
+  }
+
+  /** Once locked, an AttrContext can no longer be modified */
+  lock(): AttrContext {
+    this.#locked = true;
+    return this;
+  }
+
+  /** Get an attribute value. */
+  get(name: string): any {
+    if (this.#values.get(name)) {
+      return this.#values.get(name);
+    }
+    return this.#parent?.get(name) ?? undefined;
+  }
+
+  /** Set an attribute value. */
+  set(name: string, value: any): AttrContext {
+    if (this.#locked) {
+      throw new Error('Cannot modify a locked AttrContext');
+    }
+    this.#values.set(name, value);
+    return this;
+  }
+
+  /** Bulk set a bunch of attributes. */
+  setAll(values: { [key: string]: any }): AttrContext {
+    if (this.#locked) {
+      throw new Error('Cannot modify a locked AttrContext');
+    }
+    for (let key of Object.keys(values)) {
+      this.set(key, values[key]);
+    }
+    return this;
+  }
+
+  /** Check if an attribute is defined. */
+  has(name: string): boolean {
+    return this.#values.has(name) || (this.#parent?.has(name) ?? false);
+  }
+}
+
+//==============================================================================
+// CoreAttrTypes
 
 /** Each attribute is one of these types */
-export type ConcreteAttrTypes = number | string | boolean | Vector | Color;
+export type CoreAttrTypes = number | string | boolean | Vector | Color;
 
-export function cloneConcreteAttrType<T extends ConcreteAttrTypes | undefined>(attr: T): T {
+export function cloneCoreAttrType<T extends CoreAttrTypes | undefined>(attr: T): T {
   if (attr === undefined) {
     return undefined as T;
   }
@@ -26,192 +84,71 @@ export function cloneConcreteAttrType<T extends ConcreteAttrTypes | undefined>(a
 }
 
 //==============================================================================
-// ConcreteAttrBag
-
-export type ConcreteAttrBag<T> = {
-  [P in keyof T]: T[P] | undefined;
-}
-
-export function cloneConcreteAttrBag<T>(o: ConcreteAttrBag<T>): ConcreteAttrBag<T> {
-  let ret = {} as ConcreteAttrBag<T>;
-  for (let k in o) {
-    ret[k] = cloneConcreteAttrType(o[k] as any);
-  }
-  return ret;
-}
-
-export function cloneOptionalConcreteAttrBag<T>(o: ConcreteAttrBag<T> | undefined): ConcreteAttrBag<T> | undefined {
-  if (o === undefined) {
-    return undefined;
-  }
-  return cloneConcreteAttrBag(o);
-}
-
-//==============================================================================
 // DynamicAttr
 
 /** A function to calculate an attribute value. */
-export type AttrFunc<T extends ConcreteAttrTypes> = (ctx: PlanContext) => T;
+export type AttrFunc<T extends CoreAttrTypes> = (ctx: AttrContext) => T;
+export type DynamicAttrValue = CoreAttrTypes | AttrFunc<CoreAttrTypes> | undefined;
 
-/** An Attr can either be a concrete value or a function to return that value. */
-export type DynamicAttr<T extends ConcreteAttrTypes> = T | AttrFunc<T>;
+/** A DynamicAttr can either be a concrete value or a function to return that
+ * value. */
+export class DynamicAttr {
+  name: string = "";
+  value: DynamicAttrValue;
 
-export type OptionalDynamicAttr<T extends ConcreteAttrTypes> = DynamicAttr<T> | undefined;
-
-/** Clone an attribute */
-export function cloneDynamicAttr<T extends ConcreteAttrTypes>(attr: DynamicAttr<T>): DynamicAttr<T> {
-  if (attr instanceof Function) {
-    return attr;
+  constructor(name: string, value: DynamicAttrValue) {
+    this.name = name;
+    this.value = value;
   }
 
-  return cloneConcreteAttrType(attr);
-}
+  clone(): DynamicAttr {
+    if (this.value instanceof Function) {
+      return new DynamicAttr(this.name, this.value);
+    }
 
-/** Clone an optional attribute */
-export function cloneOptionalDynamicAttr<T extends ConcreteAttrTypes>(attr: OptionalDynamicAttr<T>): OptionalDynamicAttr<T> {
-  if (attr === undefined) {
-    return undefined;
+    return new DynamicAttr(this.name, cloneCoreAttrType(this.value));
   }
 
-  return cloneDynamicAttr(attr);
-}
-
-/** Resolve an attribute to a concrete value. */
-export function resolveDynamicAttr<T extends ConcreteAttrTypes>(attr: DynamicAttr<T>, ctx: PlanContext): T {
-  if (attr instanceof Function) {
-    return (attr as (ctx: PlanContext) => T)(ctx);
+  eval(ctx: AttrContext): CoreAttrTypes | undefined {
+    if (this.value instanceof Function) {
+      return this.value(ctx);
+    }
+    return this.value;
   }
-  return attr;
-}
-
-/** Resolve an optional attribute to a concrete value. */
-export function resolveOptionalDynamicAttr<T extends ConcreteAttrTypes>(attr: OptionalDynamicAttr<T>, ctx: PlanContext): T | undefined {
-  if (attr === undefined) {
-    return undefined;
-  }
-
-  return resolveDynamicAttr(attr, ctx);
 }
 
 //==============================================================================
-// DynamicAttrBag
+// AttrBag
 
-/** A bag of dynamic attributes defined by a ConcreteAttrBag */
-export type DynamicAttrBag<T extends ConcreteAttrBag<T>> = {
-  // OK -- this is super complex and probalby not justified.  But I got the damn
-  // thing working.  I couldn't figure out a better way to do this.
-  // If the attribute type is a ConcreteAttrType, then just turn it into a
-  // dynamic Attr.
-  // If the attribute type is a ConcreteAttrType | undefined, then turn it into
-  // a DynamicAttr (based on the type without undefined) | undefined.
-  // If none of these apply then don't include the attribute at all.
-  [P in keyof T]:
-  T[P] extends ConcreteAttrTypes
-  ? DynamicAttr<T[P]>
-  : T[P] extends ConcreteAttrTypes | undefined
-  /**/ ? DynamicAttr<Exclude<T[P], undefined>> | undefined
-  /**/ : never;
-};
+/** A bag of dynamic attributes. This is meant to be a base class for any class
+ * with dynamic attrs. 
+ * 
+ * The set of Atts is added at runtime  
+ */
+export class AttrBag {
+  attrs: DynamicAttr[] = [];
 
-
-export function cloneDynamicAttrBag<T extends ConcreteAttrBag<T>>(
-  o: DynamicAttrBag<T>
-): DynamicAttrBag<T> {
-  let ret = {} as DynamicAttrBag<T>;
-  for (let k in o) {
-    ret[k] = cloneOptionalDynamicAttr(o[k]) as any;
-  }
-  return ret;
-}
-
-export function cloneOptionalDynamicAttrBag<T extends ConcreteAttrBag<T>>(
-  o: DynamicAttrBag<T> | undefined
-): DynamicAttrBag<T> | undefined {
-  if (o === undefined) {
-    return undefined;
-  }
-  return cloneDynamicAttrBag(o);
-}
-
-/** Resolve every member of a DynamicAttrBag and return a ConcreteAttrBag. */
-export function resolve<T extends ConcreteAttrBag<T>>(
-  o: DynamicAttrBag<T>, ctx: PlanContext
-): ConcreteAttrBag<T> {
-  let ret = {} as ConcreteAttrBag<T>;
-  for (let k in o) {
-    ret[k] = o[k] !== undefined ? resolveDynamicAttr(o[k]!, ctx) : undefined;
-  }
-  return ret;
-}
-
-export function resolveOptional<T extends ConcreteAttrBag<T>>(
-  o: DynamicAttrBag<T> | undefined, ctx: PlanContext
-): ConcreteAttrBag<T> | undefined {
-  if (o === undefined) {
-    return undefined;
-  }
-  return resolve(o, ctx);
-}
-
-//==============================================================================
-// GenericAttrBag
-
-export type GenericAttrBag = {
-  [key: string]: ConcreteAttrTypes | undefined;
-}
-
-export type DynamicGenericAttrBag = DynamicAttrBag<GenericAttrBag>;
-
-//==============================================================================
-// Fill
-
-export type Fill = {
-  color?: Color;
-}
-export type DynamicFill = DynamicAttrBag<Fill>;
-
-//==============================================================================
-// Stroke
-
-export type Stroke = {
-  color?: Color;
-}
-
-export type DynamicStroke = DynamicAttrBag<Stroke>;
-
-//==============================================================================
-
-/** Core transformation information. Applied in order: scale, rotation and then translate. */
-export type Transform = {
-  position?: Vector;
-  rotation?: number;
-  scale?: Vector;
-  center?: Vector;
-}
-
-export type DynamicTransform = DynamicAttrBag<Transform>;
-
-export function getTransformMatrix(t: DynamicTransform | undefined, ctx: PlanContext): AffineMatrix | undefined {
-
-  if (t === undefined) {
-    return undefined;
+  /** Evaluate all attrs with ctx and add them to ctx. */
+  evalAllToContext(ctx: AttrContext): void {
+    // Note that we currently don't let attrs depend on each other. Because of
+    // this we collect all of the results and add them to the ctx at the end.
+    let results: { [key: string]: CoreAttrTypes | undefined } = {};
+    for (let a of this.attrs) {
+      // Throw error if name already exists?
+      results[a.name] = a.eval(ctx);
+    }
+    ctx.setAll(results);
   }
 
-  let ct = resolve(t, ctx);
-
-  let m = new AffineMatrix();
-  if (ct.position) {
-    m.translate(ct.position);
-  }
-  if (ct.rotation) {
-    m.rotate(ct.rotation);
-  }
-  if (ct.scale) {
-    m.scale(ct.scale);
-  }
-  if (ct.center) {
-    m.translate(ct.center.clone().negate());
+  getAttrByName(name: string): DynamicAttr | undefined {
+    return this.attrs.find((a) => a.name === name);
   }
 
-  return m;
+  evalAttrByName(name: string, ctx: AttrContext): CoreAttrTypes | undefined {
+    let attr = this.getAttrByName(name);
+    if (attr === undefined) {
+      return undefined;
+    }
+    return attr.eval(ctx);
+  }
 }

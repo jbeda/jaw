@@ -1,5 +1,12 @@
 import { Vector } from './vector';
 
+export type TransformArgs = {
+  position?: Vector;
+  rotation?: number;
+  scale?: Vector;
+  center?: Vector;
+}
+
 export class AffineMatrix {
   /*
   Assumes column vectors.  Matrix of form:
@@ -146,4 +153,20 @@ export class AffineMatrix {
     return this;
   }
 
+  static fromTransform({ position, rotation, scale, center }: TransformArgs): AffineMatrix {
+    let m = new AffineMatrix();
+    if (position) {
+      m.translate(position);
+    }
+    if (rotation) {
+      m.rotate(rotation);
+    }
+    if (scale) {
+      m.scale(scale);
+    }
+    if (center) {
+      m.translate(center.clone().negate());
+    }
+    return m;
+  }
 }

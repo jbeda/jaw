@@ -1,8 +1,37 @@
 import { AffineMatrix } from './affine-matrix';
-import { Fill, Stroke, cloneConcreteAttrBag } from './attributes';
 import { Path } from './path';
+import { Color } from './color';
 
 export class RenderContext {
+}
+
+export class RenderFill {
+  color?: Color;
+
+  constructor(color?: Color) {
+    this.color = color;
+  }
+
+  clone(): RenderFill {
+    let f = new RenderFill();
+    f.color = this.color;
+    return f;
+  }
+}
+
+export class RenderStroke {
+  color?: Color;
+
+  constructor(color?: Color) {
+    this.color = color;
+  }
+
+  clone(): RenderStroke {
+    let s = new RenderStroke();
+    s.color = this.color;
+    return s;
+  }
+
 }
 
 export abstract class RenderPlan {
@@ -21,13 +50,18 @@ export abstract class RenderPlan {
    * 
    * If fill or stroke is undefined then the nothing will be set.
    */
-  abstract applyStyle(fill: Fill | undefined, stroke: Stroke | undefined): void
+  abstract applyStyle(fill: RenderFill | undefined, stroke: RenderStroke | undefined): void
 }
 
 export type OptionalRenderPlan = RenderPlan | undefined;
 
 export class RenderPlanGroup extends RenderPlan {
   children: Array<RenderPlan> = new Array<RenderPlan>();
+
+  constructor(...children: RenderPlan[]) {
+    super();
+    this.children = children.slice();
+  }
 
   htmlCanvasRenderImpl(ctx2d: CanvasRenderingContext2D, rc: RenderContext): void {
     for (let c of this.children) {
@@ -42,8 +76,8 @@ export class RenderPlanGroup extends RenderPlan {
   }
 
   applyStyle(
-    fill: Fill | undefined,
-    stroke: Stroke | undefined
+    fill: RenderFill | undefined,
+    stroke: RenderStroke | undefined
   ): void {
     for (let c of this.children) {
       c.applyStyle(fill, stroke);
@@ -52,8 +86,8 @@ export class RenderPlanGroup extends RenderPlan {
 }
 
 export class RenderPlanPath extends RenderPlan {
-  stroke?: Stroke;
-  fill?: Fill;
+  stroke?: RenderStroke;
+  fill?: RenderFill;
 
   path: Path = new Path();
 
@@ -75,12 +109,12 @@ export class RenderPlanPath extends RenderPlan {
     this.path.applyTransform(transform);
   }
 
-  applyStyle(fill: Fill | undefined, stroke: Stroke | undefined): void {
+  applyStyle(fill: RenderFill | undefined, stroke: RenderStroke | undefined): void {
     if (fill !== undefined) {
-      this.fill = cloneConcreteAttrBag(fill);
+      this.fill = fill.clone();
     }
     if (stroke !== undefined) {
-      this.stroke = cloneConcreteAttrBag(stroke);
+      this.stroke = stroke.clone();
     }
   }
 }
