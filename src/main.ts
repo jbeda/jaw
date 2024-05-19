@@ -20,12 +20,13 @@ function main() {
 
   c.root.fill.setColor((ctx) => {
     let t = ctx.get("time") as Timeline;
-    let r = t.currentFrame / t.logicalFps;
+    let r = (t.currentFrame / t.logicalFps) % 1.0;
     return Color.createHSB(r, 1, 1);
-  });
+  }).enable();
+  c.root.stroke.enable();
 
-  // c.root.customModifiers.push(
-  //   new LinearRepeat(3, new Vector(50, 0), 'repeatIndex'));
+  c.root.customModifiers.push(
+    new LinearRepeat(3, new Vector(50, 0), 'repeatIndex'));
 
   let n = c.root.appendChild(new Nodes.PolygonNode(7, 80));
   n.transform
@@ -35,9 +36,9 @@ function main() {
       return t.currentFrame / t.logicalFps / 10;
     });
 
-  c.root.appendChild(new Nodes.circleNode(50))
-    .transform.setPosition(new Vector(200, 200));
-
+  n = c.root.appendChild(new Nodes.circleNode(50));
+  n.transform.setPosition(new Vector(200, 200));
+  n.stroke.disable();
 
   let pctx = new AttrContext();
   let time = new Timeline(performance.now());

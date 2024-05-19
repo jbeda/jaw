@@ -13,6 +13,12 @@ export abstract class BaseNode extends AttrBag {
 
   readonly customModifiers: Array<Modifier> = new Array<Modifier>();
 
+  constructor() {
+    super();
+    this.fill.disable();
+    this.stroke.disable();
+  };
+
   getModifiers(): Array<Modifier> {
     return new Array<Modifier>(this.fill, this.stroke, this.transform).concat(this.customModifiers);
   }
@@ -29,6 +35,10 @@ export abstract class BaseNode extends AttrBag {
 
     // Handle modifier at iModifierIdx.
     let mod = this.getModifiers()[iModifierIdx];
+    if (mod.enabled == false) {
+      return this.#planWithModifiers(ctx, iModifierIdx - 1);
+    }
+
     let innerCtx = new AttrContext(ctx);
     mod.evalAllToContext(innerCtx);
 

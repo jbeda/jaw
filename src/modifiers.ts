@@ -3,7 +3,20 @@ import { AttrBag, AttrContext, AttrFunc, DynamicAttr } from './attributes';
 import { OptionalRenderPlan } from './graphics/render-plan';
 import { Vector } from './graphics/vector';
 
+/**
+ * A modifier can be attached to a node to modify the render plan.
+ */
 export class Modifier extends AttrBag {
+  enabled: boolean = true;
+  enable(): Modifier {
+    this.enabled = true;
+    return this;
+  }
+  disable(): Modifier {
+    this.enabled = false;
+    return this;
+  }
+
   /** The derived class can return multiple contexts.
    * 
    * @param innerCtx The context with the evaluated parameters on this modifier.
